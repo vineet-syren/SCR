@@ -22,7 +22,7 @@ window.SCR = window.SCR || {};
     copilot: 'Resilience Copilot'
   };
 
-  const SUGGESTS = [
+  const DEFAULT_SUGGESTS = [
     'Top 5 risk nodes by AVAR',
     'Which products have TTR > TTS?',
     'Why is CapForm Industries critical?',
@@ -30,6 +30,20 @@ window.SCR = window.SCR || {};
     'Mitigation plan for single-source materials',
     'Daily resilience brief'
   ];
+  let SUGGESTS = DEFAULT_SUGGESTS.slice();
+
+  /** Persona lens: swap the suggestion chips (called by the persona switcher). */
+  function setSuggests(list) {
+    SUGGESTS = (list && list.length ? list : DEFAULT_SUGGESTS).slice();
+    const sug = document.getElementById('copilotSuggests');
+    if (!sug) return;
+    sug.innerHTML = '';
+    SUGGESTS.forEach(s => {
+      const chip = SCR.ui.el(`<button class="chip">${esc(s)}</button>`);
+      chip.addEventListener('click', () => ask(s));
+      sug.appendChild(chip);
+    });
+  }
 
   const DIM_NAMES = { fin: 'Financial', qual: 'Quality', rel: 'Reliability', geo: 'Geopolitical', cyb: 'Cyber', clim: 'Climate' };
 
@@ -318,12 +332,7 @@ window.SCR = window.SCR || {};
       ask(text);
     });
 
-    const sug = document.getElementById('copilotSuggests');
-    SUGGESTS.forEach(s => {
-      const chip = SCR.ui.el(`<button class="chip">${esc(s)}</button>`);
-      chip.addEventListener('click', () => ask(s));
-      sug.appendChild(chip);
-    });
+    setSuggests(SUGGESTS);
 
     const d = D();
     appendBot({
@@ -337,5 +346,5 @@ window.SCR = window.SCR || {};
     });
   }
 
-  SCR.copilot = { init, open, close };
+  SCR.copilot = { init, open, close, setSuggests };
 })();

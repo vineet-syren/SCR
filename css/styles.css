@@ -238,46 +238,121 @@ input, select { font-family: inherit; }
 .copilot-launch:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(13, 148, 136, .55); }
 .copilot-launch svg { width: 15px; height: 15px; }
 
-/* ============ Persona tab bar ============ */
-.tabbar {
-  height: var(--tabbar-h);
+/* ============ Body row: sidebar + main ============ */
+.body-row { flex: 1; display: flex; min-height: 0; }
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* ============ Sidebar (persona-mapped, Terova pattern) ============ */
+.sidebar {
+  width: 246px;
   flex-shrink: 0;
-  background: var(--tab-bg);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: stretch; gap: 2px;
-  padding: 0 18px;
-  overflow-x: auto;
-  z-index: 50;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
 }
-.tabbar::-webkit-scrollbar { height: 0; }
-.tab {
-  display: flex; align-items: center; gap: 7px;
-  padding: 0 14px;
+.side-nav { flex: 1; padding: 12px 11px; }
+.nav-section {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .13em;
+  color: var(--ink-3); font-weight: 800; padding: 14px 11px 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
   border: none; background: transparent;
-  color: var(--tab-ink);
-  font-size: 13.5px; font-weight: 600;
-  white-space: nowrap;
-  border-bottom: 2.5px solid transparent;
-  transition: color .15s;
-  position: relative;
+  color: var(--ink-2);
+  font-size: 13.5px; font-weight: 500;
+  border-radius: 9px;
+  margin-bottom: 2px;
+  text-align: left;
+  transition: background .15s, color .15s;
 }
-.tab svg { width: 16px; height: 16px; opacity: .75; }
-.tab:hover { color: var(--ink); }
-.tab.active { color: var(--tab-active); border-bottom-color: var(--tab-active); }
-.tab.active svg { opacity: 1; }
-.tab .tab-persona {
-  font-size: 9px; font-weight: 800; letter-spacing: .05em;
-  color: var(--ink-3);
-  border: 1px solid var(--border-strong);
-  border-radius: 4px; padding: 0.5px 4px;
-}
-.tab.active .tab-persona { color: var(--tab-active); border-color: currentColor; }
-.tab-badge {
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--ink-3); transition: color .15s; }
+.nav-item:hover { background: var(--surface-2); color: var(--ink); }
+.nav-item.active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.nav-item.active svg { color: var(--accent-strong); }
+.nav-badge {
+  margin-left: auto;
   font-size: 10.5px; font-weight: 700;
   background: var(--status-critical-soft); color: var(--status-critical);
   border-radius: 99px; padding: 1px 7px;
 }
-.tab-sep { width: 1px; background: var(--border); margin: 10px 8px; flex-shrink: 0; }
+.nav-home-tag {
+  margin-left: auto;
+  font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: 4px; padding: 1.5px 5px;
+}
+.sidebar-foot {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--ink-3); line-height: 1.5;
+}
+.sidebar-foot strong { color: var(--ink-2); display: block; font-size: 12px; }
+
+/* ============ Persona switcher (Viewing-as pill, Terova pattern) ============ */
+.persona-pill {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 12px 5px 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: var(--bar-ink);
+  max-width: 300px;
+  transition: border-color .15s;
+}
+.persona-pill:hover { border-color: rgba(94, 234, 212, .55); }
+.persona-pill .pp-avatar {
+  width: 27px; height: 27px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 10.5px; font-weight: 800;
+  flex-shrink: 0;
+}
+.persona-pill .pp-meta { text-align: left; min-width: 0; line-height: 1.15; }
+.persona-pill .pp-name { display: block; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.persona-pill .pp-cap { display: block; font-size: 9.5px; color: var(--bar-muted); letter-spacing: .06em; text-transform: uppercase; }
+.persona-pill svg { width: 13px; height: 13px; color: var(--bar-muted); flex-shrink: 0; }
+
+.persona-menu {
+  display: none;
+  position: absolute;
+  top: calc(var(--appbar-h) + 8px);
+  width: 390px; max-width: 94vw;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  z-index: 95;
+  padding: 8px;
+  color: var(--ink);
+}
+.persona-menu.open { display: block; }
+.persona-menu .pm-head {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .1em;
+  color: var(--ink-3); padding: 6px 12px 6px;
+}
+.persona-opt {
+  display: flex; align-items: flex-start; gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  background: none; border: none; border-radius: 10px;
+  text-align: left;
+  margin-bottom: 2px;
+  transition: background .13s;
+}
+.persona-opt .po-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 800;
+  flex-shrink: 0; margin-top: 2px;
+}
+.persona-opt .po-meta { flex: 1; min-width: 0; }
+.persona-opt .po-name { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.persona-opt .po-role { display: block; font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.persona-opt .po-lens { display: block; font-size: 11px; color: var(--ink-3); line-height: 1.35; margin-top: 2px; font-style: italic; }
+.persona-opt .po-check { width: 18px; height: 18px; flex-shrink: 0; margin-top: 6px; }
 
 /* ============ Breadcrumb row ============ */
 .crumbbar {
@@ -1139,6 +1214,7 @@ td.heat {
   .kpi-item { min-width: 46%; border-top: 1px solid var(--border); }
   .crumbbar { flex-wrap: wrap; }
   .crumb-right { margin-left: 0; }
+  .sidebar { width: 210px; }
 }
 @media (max-width: 900px) {
   .agent-grid { grid-template-columns: 1fr; }
@@ -1150,4 +1226,9 @@ td.heat {
   .hero { padding: 22px 20px; }
   .facts { grid-template-columns: repeat(2, 1fr); }
   .gap-name { width: 110px; }
+  .persona-pill .pp-meta { display: none; }
+  .sidebar { width: 62px; }
+  .sidebar .nav-section, .sidebar .nav-item > span, .sidebar .nav-badge,
+  .sidebar .nav-home-tag, .sidebar-foot { display: none; }
+  .sidebar .nav-item { justify-content: center; padding: 10px 8px; }
 }

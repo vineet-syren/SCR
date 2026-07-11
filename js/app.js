@@ -1,7 +1,12 @@
 /* ============================================================
    SCR · app.js
-   Router with persona tab bar, breadcrumb API, Links dropdown,
-   theme toggle, notifications, global search.
+   Router + persona lens (Terova pattern):
+   · Persona registry — each persona has a role, lens, accent
+     and a home cockpit.
+   · Nav as metadata — every sidebar item declares which
+     personas see it; the sidebar derives from the mapping.
+   · "Viewing as" switcher in the app bar re-lenses the nav,
+     lands on the persona's cockpit and re-tunes the copilot.
    Pages self-register on SCR.pages before this file runs.
    ============================================================ */
 window.SCR = window.SCR || {};
@@ -9,6 +14,46 @@ SCR.pages = SCR.pages || {};
 SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
 
 (function () {
+  /* ================= Persona registry ================= */
+  const PERSONAS = [
+    {
+      id: 'rrl', short: 'R&R', name: 'Risk & Resilience Leader', color: '#8b5cf6',
+      role: 'Enterprise-wide view of vulnerabilities across value streams, nodes and geographies.',
+      lens: 'Where is the largest exposure, and which mitigation deserves investment first?',
+      home: 'executive',
+      suggests: ['Top 5 risk nodes by AVAR', 'Biggest value at risk right now', 'Daily resilience brief', 'Which products have TTR > TTS?']
+    },
+    {
+      id: 'vsl', short: 'VSL', name: 'Value Chain / Stream Leader', color: '#0d9488',
+      role: 'Keeps products, brands and value streams running despite node failures.',
+      lens: 'Which SKUs are fragile, and which node breaks them first?',
+      home: 'valuestream',
+      suggests: ['Which products have TTR > TTS?', 'Biggest value at risk right now', 'What if Taicang MicroControls fails for 45 days?', 'Daily resilience brief']
+    },
+    {
+      id: 'cat', short: 'CAT', name: 'Category Leader', color: '#d97706',
+      role: 'Owns supplier and material risk — sourcing, qualification and commercial mitigation.',
+      lens: 'Which materials need alternates, buffers or new contract terms?',
+      home: 'category',
+      suggests: ['Mitigation plan for single-source materials', 'Top 5 risk nodes by AVAR', 'Why is CapForm Industries critical?', 'Which materials are single-sourced?']
+    },
+    {
+      id: 'site', short: 'SITE', name: 'SC Site Leader', color: '#3b82f6',
+      role: 'Protects plant & DC continuity: inbound materials, capacity and outbound supply.',
+      lens: 'Can my site keep running, and what is the playbook if it cannot?',
+      home: 'site',
+      suggests: ['Status of Pune plant', 'What if Pune fails for 21 days?', 'Which products have TTR > TTS?', 'Daily resilience brief']
+    }
+  ];
+  const DEFAULT_PERSONA = 'rrl';
+  let currentPersona = localStorage.getItem('scr-persona') || DEFAULT_PERSONA;
+  if (!PERSONAS.some(p => p.id === currentPersona)) currentPersona = DEFAULT_PERSONA;
+
+  const getPersona = id => PERSONAS.find(p => p.id === id) || PERSONAS[0];
+  const initials = name => name.split(/[\s/&·]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  /* ================= Nav as metadata =================
+     `personas` omitted → visible to every lens. */
   const icons = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20Z"/><path d="M9 21v-7h6v7"/></svg>',
     executive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
@@ -22,22 +67,88 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     quality: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 20 6.5V13c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6.5Z"/><path d="m9 12 2 2 4-4.5"/></svg>'
   };
 
-  const navModel = [
-    { key: 'home', label: 'Home' },
-    { key: 'executive', label: 'Executive Summary', persona: 'R&R' },
-    { key: 'valuestream', label: 'Value Streams', persona: 'VSL' },
-    { key: 'category', label: 'Category Leader', persona: 'CAT' },
-    { key: 'site', label: 'SC Site Leader', persona: 'SITE' },
-    { sep: true },
-    { key: 'network', label: 'Network' },
-    { key: 'scenario', label: 'Scenario Studio' },
-    { key: 'actions', label: 'Alerts & Actions', badge: () => SCR.data.alerts.filter(a => a.sev === 'critical' && a.status !== 'closed').length },
-    { key: 'agents', label: 'AI Agents', badge: () => SCR.data.recommendations.filter(r => r.status === 'pending').length },
-    { key: 'quality', label: 'Data Quality' }
+  const NAV_GROUPS = [
+    {
+      heading: '',
+      items: [{ key: 'home', label: 'Home' }]
+    },
+    {
+      heading: 'My cockpit',
+      items: [
+        { key: 'executive', label: 'Executive Summary', personas: ['rrl'] },
+        { key: 'valuestream', label: 'Value Streams', personas: ['rrl', 'vsl'] },
+        { key: 'category', label: 'Category & Suppliers', personas: ['rrl', 'cat'] },
+        { key: 'site', label: 'Site Resilience', personas: ['rrl', 'site', 'vsl'] }
+      ]
+    },
+    {
+      heading: 'Intelligence',
+      items: [
+        { key: 'network', label: 'Network Explorer' },
+        { key: 'scenario', label: 'Scenario Studio' }
+      ]
+    },
+    {
+      heading: 'Act',
+      items: [
+        { key: 'actions', label: 'Alerts & Actions', badge: () => SCR.data.alerts.filter(a => a.sev === 'critical' && a.status !== 'closed').length },
+        { key: 'agents', label: 'AI Agents', personas: ['rrl', 'vsl', 'cat'], badge: () => SCR.data.recommendations.filter(r => r.status === 'pending').length }
+      ]
+    },
+    {
+      heading: 'Govern',
+      items: [
+        { key: 'quality', label: 'Data Quality', personas: ['rrl', 'cat'] }
+      ]
+    }
   ];
 
-  /* ---------------- Breadcrumbs ---------------- */
-  /** parts: [{label, key?, opts?}], scope: 'Sector: All ; …' */
+  /** Groups visible to a persona (empty groups drop) — the Terova mapping. */
+  function navGroupsForPersona(pid) {
+    return NAV_GROUPS.map(g => ({
+      heading: g.heading,
+      items: g.items.filter(i => !i.personas || i.personas.includes(pid))
+    })).filter(g => g.items.length > 0);
+  }
+
+  /* ================= Persona API ================= */
+  function setPersona(id, opts) {
+    const p = getPersona(id);
+    currentPersona = p.id;
+    localStorage.setItem('scr-persona', p.id);
+    renderPersonaPill();
+    buildNav();
+    renderSidebarFoot();
+    if (SCR.copilot && SCR.copilot.setSuggests) SCR.copilot.setSuggests(p.suggests);
+    if (!opts || opts.navigate !== false) navigate(p.home);
+    if (opts && opts.toast) {
+      SCR.ui.toast('Lens switched', `Viewing as <strong>${SCR.ui.esc(p.name)}</strong> — ${SCR.ui.esc(p.lens)}`, '');
+    }
+  }
+  SCR.persona = {
+    current: () => currentPersona,
+    get: () => getPersona(currentPersona),
+    list: () => PERSONAS,
+    set: setPersona
+  };
+
+  /* ================= Router ================= */
+  function navigate(key, opts) {
+    const page = SCR.pages[key];
+    if (!page) return;
+    document.querySelectorAll('.nav-item').forEach(n =>
+      n.classList.toggle('active', n.dataset.key === key));
+    SCR.setCrumbs([{ label: 'Home', key: 'home' }, { label: page.title }]); // default; pages may override
+    SCR.charts.disposeAll();
+    const host = document.getElementById('page');
+    host.innerHTML = '';
+    document.getElementById('pageScroll').scrollTop = 0;
+    page.render(host, opts || {});
+    requestAnimationFrame(() => SCR.charts.resizeAll());
+  }
+  SCR.navigate = navigate;
+
+  /* ================= Breadcrumbs ================= */
   function setCrumbs(parts, scope) {
     const host = document.getElementById('crumbTrail');
     host.innerHTML = '';
@@ -55,38 +166,84 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
   }
   SCR.setCrumbs = setCrumbs;
 
-  /* ---------------- Router ---------------- */
-  function navigate(key, opts) {
-    const page = SCR.pages[key];
-    if (!page) return;
-    document.querySelectorAll('.tab').forEach(n =>
-      n.classList.toggle('active', n.dataset.key === key));
-    setCrumbs([{ label: 'Home', key: 'home' }, { label: page.title }]); // default; pages may override
-    SCR.charts.disposeAll();
-    const host = document.getElementById('page');
-    host.innerHTML = '';
-    document.getElementById('pageScroll').scrollTop = 0;
-    page.render(host, opts || {});
-    requestAnimationFrame(() => SCR.charts.resizeAll());
-  }
-  SCR.navigate = navigate;
-
+  /* ================= Sidebar ================= */
   function buildNav() {
-    const nav = document.getElementById('tabbar');
+    const nav = document.getElementById('nav');
     nav.innerHTML = '';
-    navModel.forEach(item => {
-      if (item.sep) { nav.appendChild(SCR.ui.el('<span class="tab-sep"></span>')); return; }
-      const badge = item.badge ? item.badge() : 0;
-      const btn = SCR.ui.el(`<button class="tab" data-key="${item.key}">
-        ${icons[item.key] || ''}<span>${item.label}</span>
-        ${badge ? `<span class="tab-badge">${badge}</span>` : (item.persona ? `<span class="tab-persona">${item.persona}</span>` : '')}
-      </button>`);
-      btn.addEventListener('click', () => navigate(item.key));
-      nav.appendChild(btn);
+    const p = getPersona(currentPersona);
+    navGroupsForPersona(currentPersona).forEach(group => {
+      if (group.heading) nav.appendChild(SCR.ui.el(`<div class="nav-section">${group.heading}</div>`));
+      group.items.forEach(item => {
+        const badge = item.badge ? item.badge() : 0;
+        const isHome = item.key === p.home;
+        const btn = SCR.ui.el(`<button class="nav-item" data-key="${item.key}">
+          ${icons[item.key] || ''}<span>${item.label}</span>
+          ${badge ? `<span class="nav-badge">${badge}</span>` : (isHome ? '<span class="nav-home-tag">MY VIEW</span>' : '')}
+        </button>`);
+        btn.addEventListener('click', () => navigate(item.key));
+        nav.appendChild(btn);
+      });
     });
   }
 
-  /* ---------------- Links dropdown ---------------- */
+  function renderSidebarFoot() {
+    const p = getPersona(currentPersona);
+    document.getElementById('sidebarFoot').innerHTML =
+      `<strong>Viewing as ${SCR.ui.esc(p.short)} · ${SCR.ui.esc(p.name)}</strong>${SCR.ui.esc(p.lens)}`;
+  }
+
+  /* ================= Persona switcher (app bar) ================= */
+  function renderPersonaPill() {
+    const p = getPersona(currentPersona);
+    document.getElementById('personaPill').innerHTML = `
+      <span class="pp-avatar" style="background:color-mix(in srgb, ${p.color} 22%, transparent);color:${p.color}">${initials(p.name)}</span>
+      <span class="pp-meta">
+        <span class="pp-name">${SCR.ui.esc(p.name)}</span>
+        <span class="pp-cap">Viewing as · persona lens</span>
+      </span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>`;
+  }
+
+  function buildPersonaMenu() {
+    const menu = document.getElementById('personaMenu');
+    menu.innerHTML = '<div class="pm-head">VIEW AS — persona re-lenses the sidebar, landing and copilot</div>';
+    PERSONAS.forEach(p => {
+      const active = p.id === currentPersona;
+      const opt = SCR.ui.el(`<button class="persona-opt" style="${active ? `background:color-mix(in srgb, ${p.color} 9%, transparent)` : ''}">
+        <span class="po-avatar" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:${p.color}">${initials(p.name)}</span>
+        <span class="po-meta">
+          <span class="po-name">${SCR.ui.esc(p.name)}</span>
+          <span class="po-role">${SCR.ui.esc(p.role)}</span>
+          <span class="po-lens">“${SCR.ui.esc(p.lens)}”</span>
+        </span>
+        ${active ? `<svg class="po-check" viewBox="0 0 24 24" fill="none" stroke="${p.color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>` : ''}
+      </button>`);
+      opt.addEventListener('click', () => {
+        menu.classList.remove('open');
+        if (p.id !== currentPersona) setPersona(p.id, { toast: true });
+      });
+      menu.appendChild(opt);
+    });
+  }
+
+  function initPersonaSwitcher() {
+    const pill = document.getElementById('personaPill');
+    const menu = document.getElementById('personaMenu');
+    renderPersonaPill();
+    pill.addEventListener('click', e => {
+      e.stopPropagation();
+      buildPersonaMenu();
+      // anchor the menu under the pill
+      const r = pill.getBoundingClientRect();
+      menu.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+      menu.classList.toggle('open');
+    });
+    document.addEventListener('click', e => {
+      if (!menu.contains(e.target) && e.target !== pill) menu.classList.remove('open');
+    });
+  }
+
+  /* ================= Links dropdown ================= */
   function initLinks() {
     const menu = document.getElementById('linksMenu');
     const btn = document.getElementById('linksBtn');
@@ -121,7 +278,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  /* ---------------- Theme ---------------- */
+  /* ================= Theme ================= */
   function initTheme() {
     const saved = localStorage.getItem('scr-theme');
     if (saved) document.body.setAttribute('data-theme', saved);
@@ -141,7 +298,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  /* ---------------- Notifications ---------------- */
+  /* ================= Notifications ================= */
   function initNotifications() {
     const panel = document.getElementById('notifPanel');
     const sevColor = { critical: 'var(--status-critical)', high: 'var(--status-serious)', medium: 'var(--status-warning)' };
@@ -164,7 +321,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  /* ---------------- Global search ---------------- */
+  /* ================= Global search ================= */
   function initSearch() {
     const input = document.getElementById('globalSearch');
     const results = document.getElementById('searchResults');
@@ -211,7 +368,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  /* ---------------- Overlays ---------------- */
+  /* ================= Overlays ================= */
   function initOverlays() {
     document.getElementById('drawerClose').addEventListener('click', SCR.ui.closeDrawer);
     document.getElementById('drawerScrim').addEventListener('click', SCR.ui.closeDrawer);
@@ -224,15 +381,17 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  /* ---------------- Boot ---------------- */
+  /* ================= Boot ================= */
   document.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    buildNav();
+    initPersonaSwitcher();
     initLinks();
     initNotifications();
     initSearch();
     initOverlays();
     if (SCR.copilot && SCR.copilot.init) SCR.copilot.init();
+    // apply the saved persona lens without forcing navigation away from Home
+    setPersona(currentPersona, { navigate: false });
     navigate('home');
   });
 })();

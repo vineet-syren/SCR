@@ -9,32 +9,26 @@ window.SCR = window.SCR || {};
 (function () {
   'use strict';
 
-  const PERSONAS = [
-    {
-      key: 'valuestream', name: 'Value Chain / Stream Leader', tag: 'VSL',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M7 12h13"/><path d="M11 18h9"/><circle cx="4" cy="12" r="1"/><circle cx="8" cy="18" r="1"/></svg>',
-      q: 'Which products and markets are exposed? Where does recovery outlive survival on my BOMs?',
-      stats: p => [[p.products + ' SKUs', 'in scope'], [p.gaps + ' gapped', 'TTR > TTS']]
-    },
-    {
-      key: 'executive', name: 'Risk & Resilience Leader', tag: 'R&R',
+  /* Card chrome per persona id — content (name/role/lens/color/home)
+     comes from the persona registry in app.js (Terova pattern). */
+  const CARD_META = {
+    rrl: {
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
-      q: 'Where is the largest enterprise exposure? Which nodes and sectors need investment first?',
       stats: p => [[p.avar, 'Wtd. AVAR'], [p.ri + '%', 'enterprise RI']]
     },
-    {
-      key: 'category', name: 'Category Leader', tag: 'CAT',
+    vsl: {
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M7 12h13"/><path d="M11 18h9"/><circle cx="4" cy="12" r="1"/><circle cx="8" cy="18" r="1"/></svg>',
+      stats: p => [[p.products + ' SKUs', 'in scope'], [p.gaps + ' gapped', 'TTR > TTS']]
+    },
+    cat: {
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M12 13 3 8"/><path d="m12 13 9-5"/><path d="M12 13v8"/></svg>',
-      q: 'Which suppliers and materials drive risk? Where do we need alternates, buffers or new terms?',
       stats: p => [[p.singles + ' sole-src', p.singlesRisky + ' risky'], [p.suppliers, 'suppliers']]
     },
-    {
-      key: 'site', name: 'SC Site Leader', tag: 'SITE',
+    site: {
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l7-5 7 5v13"/><path d="M10 21v-6h4v6"/><path d="M21 21V11l-4-3"/><path d="M3 21h18"/></svg>',
-      q: 'Can my site keep running? Which inbound material stops production first, and what is the playbook?',
       stats: p => [[p.plants + ' plants', p.dcs + ' DCs'], [p.siteCrit + ' materials', 'can stop a site']]
     }
-  ];
+  };
 
   function render(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
@@ -78,18 +72,22 @@ window.SCR = window.SCR || {};
     /* ===== Persona cards ===== */
     const left = U.el('<div class="col-9" style="min-width:0"></div>');
     grid.appendChild(left);
-    left.appendChild(U.el(`<div class="section-title">Resilience program personas <small>— click to open the persona-specific cockpit</small></div>`));
+    const current = SCR.persona.current();
+    left.appendChild(U.el(`<div class="section-title">Resilience program personas <small>— click to switch the lens and open that persona's cockpit</small></div>`));
     const pGrid = U.el('<div class="persona-grid"></div>');
     left.appendChild(pGrid);
-    PERSONAS.forEach(p => {
-      const card = U.el(`<button class="persona-card">
+    SCR.persona.list().forEach(p => {
+      const meta = CARD_META[p.id] || CARD_META.rrl;
+      const active = p.id === current;
+      const card = U.el(`<button class="persona-card" ${active ? 'style="outline:3px solid color-mix(in srgb, #99f6e4 65%, transparent);outline-offset:2px"' : ''}>
         <span class="pc-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
-        <span class="pc-icon">${p.icon}</span>
-        <h3>${p.name}</h3>
-        <span class="pc-q">${p.q}</span>
-        <span class="pc-stats">${p.stats(stats).map(([b, s]) => `<span class="pc-stat"><b>${b}</b><span>${s}</span></span>`).join('')}</span>
+        <span class="pc-icon">${meta.icon}</span>
+        <h3>${U.esc(p.name)}</h3>
+        <span class="pc-q">${U.esc(p.role)} ${U.esc(p.lens)}</span>
+        <span class="pc-stats">${meta.stats(stats).map(([b, s]) => `<span class="pc-stat"><b>${b}</b><span>${s}</span></span>`).join('')}
+          ${active ? '<span class="pc-stat"><b>✓ Active</b><span>current lens</span></span>' : ''}</span>
       </button>`);
-      card.addEventListener('click', () => SCR.navigate(p.key));
+      card.addEventListener('click', () => SCR.persona.set(p.id, { toast: true }));
       pGrid.appendChild(card);
     });
 

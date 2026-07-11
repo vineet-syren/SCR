@@ -37,6 +37,7 @@
     </div>
 
     <div class="appbar-right">
+      <button class="persona-pill" id="personaPill" title="Switch persona lens"><!-- populated by app.js --></button>
       <span class="refresh-stamp">Weekly refresh · <strong>10-Jul-2026 05:00 UTC</strong></span>
       <button class="icon-btn" id="themeToggle" title="Toggle dark mode">
         <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
@@ -53,28 +54,37 @@
     </div>
   </header>
 
-  <!-- ======= Persona tab bar ======= -->
-  <nav class="tabbar" id="tabbar"><!-- populated by app.js --></nav>
+  <div class="body-row">
 
-  <!-- ======= Breadcrumb row ======= -->
-  <div class="crumbbar" id="crumbbar">
-    <div class="crumb-trail" id="crumbTrail"></div>
-    <div class="crumb-right">
-      <span class="crumb-stamp">Last Refreshed at 10-Jul-2026 05:00:00 UTC</span>
-      <div class="links-dd" id="linksDd">
-        <button class="links-btn" id="linksBtn">Links
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="links-menu" id="linksMenu"><!-- populated by app.js --></div>
+    <!-- ======= Sidebar (persona-mapped features) ======= -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="side-nav" id="nav"><!-- populated by app.js --></nav>
+      <div class="sidebar-foot" id="sidebarFoot"><!-- persona lens note, populated by app.js --></div>
+    </aside>
+
+    <div class="main-col">
+      <!-- ======= Breadcrumb row ======= -->
+      <div class="crumbbar" id="crumbbar">
+        <div class="crumb-trail" id="crumbTrail"></div>
+        <div class="crumb-right">
+          <span class="crumb-stamp">Last Refreshed at 10-Jul-2026 05:00:00 UTC</span>
+          <div class="links-dd" id="linksDd">
+            <button class="links-btn" id="linksBtn">Links
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="links-menu" id="linksMenu"><!-- populated by app.js --></div>
+          </div>
+        </div>
       </div>
+
+      <main class="page" id="pageScroll">
+        <div class="page-inner" id="page"><!-- routed pages render here --></div>
+      </main>
     </div>
   </div>
 
   <div class="notif-panel" id="notifPanel"><!-- populated by app.js --></div>
-
-  <main class="page" id="pageScroll">
-    <div class="page-inner" id="page"><!-- routed pages render here --></div>
-  </main>
+  <div class="persona-menu" id="personaMenu"><!-- populated by app.js --></div>
 </div>
 
 <!-- ======= Detail drawer ======= -->

@@ -112,7 +112,7 @@ window.SCR = window.SCR || {};
 
   function render(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
-    const scopeStr = `Sector: ${state.sector === 'all' ? 'All' : D.sectorName(state.sector)} ; Value Stream: ${state.stream}`;
+    const scopeStr = `Sector: ${state.sector === 'all' ? 'All' : D.sectorName(state.sector)} ; Value Stream: ${state.stream === 'all' ? 'All' : state.stream}`;
     SCR.setCrumbs([{ label: 'Home', key: 'home' }, { label: 'Executive Summary' }], scopeStr);
 
     host.appendChild(U.el(`<div class="page-head">
@@ -208,6 +208,7 @@ window.SCR = window.SCR || {};
             return `<strong>${n.name}</strong> · ${n.type}<br/>AVAR ${F.usdM(n.avar)} · VAR ${F.usdM(n.var)}<br/>Sales linked ${F.usdM(n.sales)} · RI ${F.ri(n.ri)}`;
           }
         }),
+        legend: { show: false },
         grid: { left: 8, right: 52, top: 6, bottom: 4, containLabel: true },
         xAxis: SCR.theme.valAxis({ axisLabel: { formatter: v => F.num(v) } }),
         yAxis: Object.assign(SCR.theme.catAxis(top.map(n => n.name)), {

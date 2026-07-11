@@ -52,6 +52,12 @@ Opening `index.html` directly from the filesystem also works (no ES modules).
 
 Cross-cutting:
 
+- **Persona lens** (Terova pattern) — a "Viewing as" switcher in the app bar re-lenses
+  the product per persona: the left sidebar shows only that persona's features
+  (nav-as-metadata with per-item persona visibility), landing jumps to their cockpit
+  ("MY VIEW"), and the copilot's suggestions re-tune. The Home page's persona cards
+  drive the same registry. R&R Leader sees everything; VSL, Category and Site leaders
+  get focused sidebars.
 - **Resilience Copilot** (top-right) — natural-language Q&A computed live from the
   dataset with agent-attributed answers, action chips and drill-through.
 - **360° drawers** — click any supplier / material / product / site / alert anywhere
@@ -78,9 +84,21 @@ js/charts.js          chart lifecycle + waterfall/mekko/gantt/sparkline/combo bu
 js/components.js      shared UI + the 360° detail drawers
 js/copilot.js         Resilience Copilot
 js/pages/*.js         one module per page (self-registering)
-js/app.js             router, nav, theme toggle, search, notifications
+js/app.js             router, persona registry + lens switcher, sidebar nav, search
 vendor/echarts.min.js Apache ECharts 5.5 (vendored — fully offline)
 ```
+
+## Navigation
+
+Left sidebar (persona-filtered) under a dark app bar: **My cockpit** (Executive Summary ·
+Value Streams · Category & Suppliers · Site Resilience) · **Intelligence** (Network
+Explorer · Scenario Studio) · **Act** (Alerts & Actions · AI Agents) · **Govern**
+(Data Quality). Breadcrumb row with the original's `Links ▾` dropdown (RI Matrix guide,
+metric definitions, missing-data worklist) and `Filter ›` flyouts on persona pages.
+Signature elements modernized from the original screenshots: icon-chip KPI strips with
+the insight bulb, teal-headed tables, the Node Overview drill (product list → Node AVAR
+vs Sales Impacted with AVAR/SALES toggle and in-cell bars), the Category node data
+summary (multi-measure in-row bars) and the Node Risk Summary heat matrix.
 
 ## Design language
 

@@ -310,7 +310,11 @@ window.SCR = window.SCR || {};
             return h;
           }
         }),
-        legend: Object.assign(SCR.theme.baseOption().legend, { top: 0, left: 'center' }),
+        legend: Object.assign(SCR.theme.baseOption().legend, {
+          top: 0, left: 'center',
+          data: cfg.bars.map(b => ({ name: b.name, itemStyle: { color: b.color ? b.color(t) : undefined } }))
+            .concat([{ name: cfg.line.name, itemStyle: { color: lineColor }, icon: cfg.line.dots ? 'circle' : 'roundRect' }])
+        }),
         grid: [
           { left: 8, right: 14, top: 30, height: '52%', containLabel: true },
           { left: 8, right: 14, top: '72%', bottom: 6, containLabel: true }

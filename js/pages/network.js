@@ -105,15 +105,19 @@ window.SCR = window.SCR || {};
     if (opts.product) state.product = opts.product;
 
     /* ===== Scope bar ===== */
-    const fb = U.el(`<div class="filter-bar">
-      <span class="fb-label">Trace</span>
-      <select id="fProd">
-        <option value="all">Entire network — all products</option>
-        ${D.products.map(p => `<option value="${p.id}" ${state.product === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
-      </select>
-      <span class="fb-spacer"></span>
-      <span class="muted" style="font-size:12.5px">supplier → material → plant → DC → market · line width ≈ dependency, red = single-source</span>
-    </div>`);
+    host.appendChild(U.el(`<div class="page-head">
+      <span class="ph-kicker">Digital twin :</span><h1>Network Explorer</h1>
+      <span class="ph-note">supplier → material → plant → DC → market · red edge = single-source</span>
+    </div>`));
+    const fb = U.el(`<div class="filter-row"><div class="filter-flyout open" style="margin-top:0">
+      <div class="ff-field" style="min-width:280px">
+        <label>Trace a product's dependency chain</label>
+        <select id="fProd">
+          <option value="all">Entire network — all products</option>
+          ${D.products.map(p => `<option value="${p.id}" ${state.product === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+        </select>
+      </div>
+    </div></div>`);
     host.appendChild(fb);
     fb.querySelector('#fProd').addEventListener('change', e => {
       state.product = e.target.value;

@@ -19,20 +19,17 @@ window.SCR = window.SCR || {};
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
     const dq = D.dataQuality;
 
-    /* ===== KPI row ===== */
-    const kpiRow = U.el('<div class="kpi-row cols-5" style="margin-bottom:16px"></div>');
-    kpiRow.appendChild(U.kpi({ label: 'Components mapped', value: F.num(dq.componentsTotal), sub: 'across 24 SKU BOMs' }));
-    kpiRow.appendChild(U.kpi({
-      label: 'Missing TTR', value: F.num(dq.missingTTR),
-      delta: { text: '−38 this week', dir: 'good', vs: '' }
-    }));
-    kpiRow.appendChild(U.kpi({ label: 'Missing TTS', value: F.num(dq.missingTTS), sub: 'fully covered' }));
-    kpiRow.appendChild(U.kpi({ label: 'Missing RRE', value: F.num(dq.missingRRE), sub: 'assessments pending' }));
-    kpiRow.appendChild(U.kpi({
-      label: 'Trust score', value: '92.4%',
-      sub: 'weighted completeness', delta: { text: '+1.1 pts', dir: 'good' }
-    }));
-    host.appendChild(kpiRow);
+    /* ===== KPI strip ===== */
+    host.appendChild(U.kpiStrip([
+      { icon: 'layers', color: 0, label: 'Components mapped', value: F.num(dq.componentsTotal), sub: 'across 24 SKU BOMs' },
+      { icon: 'gap', color: 3, label: 'Missing TTR', value: F.num(dq.missingTTR), sub: '−38 this week', subClass: 'good' },
+      { icon: 'gap', color: 2, label: 'Missing TTS', value: F.num(dq.missingTTS), sub: 'fully covered', subClass: 'good' },
+      { icon: 'gap', color: 6, label: 'Missing RRE', value: F.num(dq.missingRRE), sub: 'assessments pending' },
+      {
+        icon: 'gauge', color: 1, label: 'Trust score', value: '92.4%',
+        progress: { pct: 92.4, color: 'var(--status-good)' }, sub: '+1.1 pts vs last month', subClass: 'good'
+      }
+    ]));
 
     const grid = U.el('<div class="grid grid-12"></div>');
     host.appendChild(grid);

@@ -16,21 +16,15 @@ window.SCR = window.SCR || {};
   function render(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
 
-    /* ===== KPI row ===== */
+    /* ===== KPI strip ===== */
     const open = D.alerts.filter(a => a.status !== 'closed');
-    const kpiRow = U.el('<div class="kpi-row cols-5" style="margin-bottom:16px"></div>');
-    kpiRow.appendChild(U.kpi({ label: 'Open alerts', value: open.length, sub: D.kpis.criticalAlerts + ' critical' }));
-    kpiRow.appendChild(U.kpi({
-      label: 'Exposure across open alerts',
-      value: F.usdM(+open.reduce((a, x) => a + x.exposure, 0).toFixed(1)), sub: 'VAR linked'
-    }));
-    kpiRow.appendChild(U.kpi({ label: 'Actions in flight', value: D.kpis.openActions, sub: D.kpis.overdueActions + ' overdue' }));
-    kpiRow.appendChild(U.kpi({
-      label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd),
-      delta: { text: '66 actions executed', dir: 'good', vs: '' }
-    }));
-    kpiRow.appendChild(U.kpi({ label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert' }));
-    host.appendChild(kpiRow);
+    host.appendChild(U.kpiStrip([
+      { icon: 'risk', color: 5, label: 'Open alerts', value: open.length, sub: D.kpis.criticalAlerts + ' critical', subClass: 'bad' },
+      { icon: 'dollar', color: 3, label: 'Exposure across open alerts', value: F.usdM(+open.reduce((a, x) => a + x.exposure, 0).toFixed(1)), sub: 'VAR linked' },
+      { icon: 'gap', color: 1, label: 'Actions in flight', value: D.kpis.openActions, sub: D.kpis.overdueActions + ' overdue', subClass: D.kpis.overdueActions ? 'bad' : 'good' },
+      { icon: 'gauge', color: 2, label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), sub: '66 actions executed', subClass: 'good' },
+      { icon: 'globe', color: 0, label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert' }
+    ]));
 
     const grid = U.el('<div class="grid grid-12"></div>');
     host.appendChild(grid);
