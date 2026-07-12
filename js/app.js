@@ -69,10 +69,6 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
 
   const NAV_GROUPS = [
     {
-      heading: '',
-      items: [{ key: 'home', label: 'Home' }]
-    },
-    {
       heading: 'My cockpit',
       items: [
         { key: 'executive', label: 'Executive Summary', personas: ['rrl'] },
@@ -118,8 +114,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     localStorage.setItem('scr-persona', p.id);
     renderPersonaPill();
     buildNav();
-    renderSidebarFoot();
-    if (SCR.copilot && SCR.copilot.setSuggests) SCR.copilot.setSuggests(p.suggests);
+    if (SCR.copilot && SCR.copilot.personaChanged) SCR.copilot.personaChanged(p);
     if (!opts || opts.navigate !== false) navigate(p.home);
     if (opts && opts.toast) {
       SCR.ui.toast('Lens switched', `Viewing as <strong>${SCR.ui.esc(p.name)}</strong> — ${SCR.ui.esc(p.lens)}`, '');
@@ -138,7 +133,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     if (!page) return;
     document.querySelectorAll('.nav-item').forEach(n =>
       n.classList.toggle('active', n.dataset.key === key));
-    SCR.setCrumbs([{ label: 'Home', key: 'home' }, { label: page.title }]); // default; pages may override
+    SCR.setCrumbs([{ label: page.title }]); // default; pages may override
     SCR.charts.disposeAll();
     const host = document.getElementById('page');
     host.innerHTML = '';
@@ -176,7 +171,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
       group.items.forEach(item => {
         const badge = item.badge ? item.badge() : 0;
         const isHome = item.key === p.home;
-        const btn = SCR.ui.el(`<button class="nav-item" data-key="${item.key}">
+        const btn = SCR.ui.el(`<button class="nav-item" data-key="${item.key}" title="${item.label}">
           ${icons[item.key] || ''}<span>${item.label}</span>
           ${badge ? `<span class="nav-badge">${badge}</span>` : (isHome ? '<span class="nav-home-tag">MY VIEW</span>' : '')}
         </button>`);
@@ -186,10 +181,17 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
   }
 
-  function renderSidebarFoot() {
-    const p = getPersona(currentPersona);
-    document.getElementById('sidebarFoot').innerHTML =
-      `<strong>Viewing as ${SCR.ui.esc(p.short)} · ${SCR.ui.esc(p.name)}</strong>${SCR.ui.esc(p.lens)}`;
+  /* ================= Sidebar collapse ================= */
+  function initSideToggle() {
+    const shell = document.querySelector('.shell');
+    const btn = document.getElementById('sideToggle');
+    if (localStorage.getItem('scr-side') === 'collapsed') shell.classList.add('side-collapsed');
+    btn.addEventListener('click', () => {
+      const collapsed = shell.classList.toggle('side-collapsed');
+      localStorage.setItem('scr-side', collapsed ? 'collapsed' : 'open');
+      btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      setTimeout(() => SCR.charts.resizeAll(), 270);
+    });
   }
 
   /* ================= Persona switcher (app bar) ================= */
@@ -389,9 +391,8 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     initNotifications();
     initSearch();
     initOverlays();
+    initSideToggle();
     if (SCR.copilot && SCR.copilot.init) SCR.copilot.init();
-    // apply the saved persona lens without forcing navigation away from Home
-    setPersona(currentPersona, { navigate: false });
-    navigate('home');
+    setPersona(currentPersona);
   });
 })();

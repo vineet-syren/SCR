@@ -53,13 +53,16 @@ Opening `index.html` directly from the filesystem also works (no ES modules).
 Cross-cutting:
 
 - **Persona lens** (Terova pattern) — a "Viewing as" switcher in the app bar re-lenses
-  the product per persona: the left sidebar shows only that persona's features
-  (nav-as-metadata with per-item persona visibility), landing jumps to their cockpit
-  ("MY VIEW"), and the copilot's suggestions re-tune. The Home page's persona cards
-  drive the same registry. R&R Leader sees everything; VSL, Category and Site leaders
-  get focused sidebars.
-- **Resilience Copilot** (top-right) — natural-language Q&A computed live from the
-  dataset with agent-attributed answers, action chips and drill-through.
+  the product per persona: the collapsible left sidebar (subtle width animation,
+  persisted) shows only that persona's features (nav-as-metadata with per-item persona
+  visibility), landing jumps to their cockpit ("MY VIEW"), and the copilot's sample
+  questions re-tune per persona. R&R Leader sees everything; VSL, Category and Site
+  leaders get focused sidebars. The Executive Summary opens with the E2E welcome hero.
+- **Resilience Copilot** — a floating dock bottom-right (Terova CopilotDock pattern):
+  an extended FAB expands into a chat panel with persona-specific sample questions,
+  live-computed agent-attributed answers, action chips, drill-through and a
+  new-conversation reset. Data freshness lives behind a refresh icon tooltip in the
+  app bar (weekly recalc + daily external feeds).
 - **360° drawers** — click any supplier / material / product / site / alert anywhere
   for a detail drawer with facts, 12-month trends, TTS-vs-TTR bars and cross-links.
 - **Global search**, **alert center**, **dark mode** (fully re-themed charts), toasts,

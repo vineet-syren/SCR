@@ -66,7 +66,6 @@ window.SCR = window.SCR || {};
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
     const scopeStr = `Sector: ${state.sector === 'all' ? 'All' : D.sectorName(state.sector)} ; Value Stream: ${state.stream === 'all' ? 'All' : state.stream} ; Product: All`;
     SCR.setCrumbs([
-      { label: 'Home', key: 'home' },
       { label: 'VSL Home', key: 'valuestream', opts: { reset: true } },
       { label: 'Overview' }
     ], scopeStr);
@@ -196,7 +195,6 @@ window.SCR = window.SCR || {};
 
     const scopeStr = `Sector: ${prod.sectorName} ; Value Stream: ${prod.stream} ; Product: ${prod.name}`;
     SCR.setCrumbs([
-      { label: 'Home', key: 'home' },
       { label: 'VSL Home', key: 'valuestream', opts: { reset: true } },
       { label: 'Overview', key: 'valuestream', opts: { back: true } },
       { label: 'Node Overview' }

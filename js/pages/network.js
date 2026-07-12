@@ -109,7 +109,10 @@ window.SCR = window.SCR || {};
       <span class="ph-kicker">Digital twin :</span><h1>Network Explorer</h1>
       <span class="ph-note">supplier → material → plant → DC → market · red edge = single-source</span>
     </div>`));
-    const fb = U.el(`<div class="filter-row"><div class="filter-flyout open" style="margin-top:0">
+    const g = buildGraph();
+    const tierCount = tier => g.nodes.filter(n => n.tier === tier).length;
+    const singleLinks = g.links.filter(l => l[2]).length;
+    const fb = U.el(`<div class="filter-row"><div class="filter-flyout open" style="margin-top:0;align-items:center">
       <div class="ff-field" style="min-width:280px">
         <label>Trace a product's dependency chain</label>
         <select id="fProd">
@@ -117,14 +120,20 @@ window.SCR = window.SCR || {};
           ${D.products.map(p => `<option value="${p.id}" ${state.product === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
         </select>
       </div>
+      <div class="chip-row" style="margin-left:6px">
+        <span class="badge neutral plain">${tierCount('Supplier')} suppliers</span>
+        <span class="badge neutral plain">${tierCount('Material')} materials</span>
+        <span class="badge neutral plain">${tierCount('Plant')} plants</span>
+        <span class="badge neutral plain">${tierCount('DC')} DCs</span>
+        <span class="badge neutral plain">${tierCount('Market')} markets</span>
+        <span class="badge ${singleLinks ? 'critical' : 'low'}">${singleLinks} single-source link${singleLinks === 1 ? '' : 's'}</span>
+      </div>
     </div></div>`);
     host.appendChild(fb);
     fb.querySelector('#fProd').addEventListener('change', e => {
       state.product = e.target.value;
       SCR.navigate('network');
     });
-
-    const g = buildGraph();
     const grid = U.el('<div class="grid grid-12"></div>');
     host.appendChild(grid);
 

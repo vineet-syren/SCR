@@ -113,7 +113,25 @@ window.SCR = window.SCR || {};
   function render(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
     const scopeStr = `Sector: ${state.sector === 'all' ? 'All' : D.sectorName(state.sector)} ; Value Stream: ${state.stream === 'all' ? 'All' : state.stream}`;
-    SCR.setCrumbs([{ label: 'Home', key: 'home' }, { label: 'Executive Summary' }], scopeStr);
+    SCR.setCrumbs([{ label: 'Executive Summary' }], scopeStr);
+
+    /* ===== Welcome hero (the E2E program banner) ===== */
+    host.appendChild(U.el(`<div class="hero compact">
+      <h1>Welcome to the E2E Supply Chain Resilience Command Center</h1>
+      <p><strong>Supply Chain Resilience</strong> creates end-to-end visibility to vulnerabilities by quantifying
+      <strong>Value at Risk</strong> across every product, material, supplier, plant, DC and market — focusing
+      mitigation where it protects the most revenue. Sensing, impact math and mitigation run continuously on an
+      agentic AI layer; humans approve the moves that matter.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hs-val">${F.usdM(D.kpis.totalNTS)}</div><div class="hs-label">NTS in scope</div></div>
+        <div class="hero-stat"><div class="hs-val">${F.usdM(D.kpis.totalVAR)}</div><div class="hs-label">Value at risk</div></div>
+        <div class="hero-stat"><div class="hs-val">${F.usdM(D.kpis.totalAVAR)}</div><div class="hs-label">Wtd. AVAR</div></div>
+        <div class="hero-stat"><div class="hs-val">${D.kpis.enterpriseRI}%</div><div class="hs-label">Enterprise RI</div></div>
+        <div class="hero-stat"><div class="hs-val">${D.kpis.gapMaterials}</div><div class="hs-label">TTR &gt; TTS components</div></div>
+        <div class="hero-stat"><div class="hs-val">${F.usdM(D.kpis.mitigatedYtd)}</div><div class="hs-label">AVAR mitigated YTD</div></div>
+        <div class="hero-stat"><div class="hs-val">${D.kpis.detectionLeadDays}d</div><div class="hs-label">Mean detection lead</div></div>
+      </div>
+    </div>`));
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">Supply Chain Resilience :</span><h1>Executive Summary</h1>
@@ -149,13 +167,13 @@ window.SCR = window.SCR || {};
 
     /* ===== KPI strip (signature) ===== */
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 0, label: 'NTS (MM USD)', value: F.num(Math.round(nts)) },
-      { icon: 'dollar', color: 5, label: 'Wtd. AVAR (MM USD)', value: F.num(Math.round(avar * 10) / 10), sub: F.usdM(+prods.reduce((a, p) => a + p.var, 0).toFixed(1)) + ' VAR', subClass: 'bad' },
+      { icon: 'risk', color: 0, label: 'NTS', value: F.num(Math.round(nts)), sub: 'MM USD' },
+      { icon: 'dollar', color: 5, label: 'Wtd. AVAR', value: F.num(Math.round(avar * 10) / 10), sub: F.usdM(+prods.reduce((a, p) => a + p.var, 0).toFixed(1)) + ' VAR', subClass: 'bad' },
       { icon: 'box', color: 4, label: 'Products', value: prods.length, onClick: () => SCR.navigate('valuestream', { sector: state.sector }) },
       { icon: 'globe', color: 2, label: 'Countries', value: mkts.size },
       { icon: 'pin', color: 3, label: 'Nodes', value: supSet.size + siteSet.size, onClick: () => SCR.navigate('network') },
-      { icon: 'truck', color: 1, label: 'Supplier / EM nodes', value: supSet.size, onClick: () => SCR.navigate('category') },
-      { icon: 'factory', color: 6, label: 'Plant & DC nodes', value: siteSet.size, onClick: () => SCR.navigate('site') }
+      { icon: 'truck', color: 1, label: 'Supplier / EM', value: supSet.size, onClick: () => SCR.navigate('category') },
+      { icon: 'factory', color: 6, label: 'Plants & DCs', value: siteSet.size, onClick: () => SCR.navigate('site') }
     ], { bulb: { onClick: () => openInsights(prods) } }));
 
     const grid = U.el('<div class="grid grid-12"></div>');

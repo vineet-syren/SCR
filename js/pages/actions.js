@@ -104,7 +104,7 @@ window.SCR = window.SCR || {};
         legend: { show: false },
         series: [{
           type: 'funnel',
-          left: 10, right: 10, top: 8, bottom: 8,
+          left: 0, right: 148, top: 8, bottom: 8,
           sort: 'descending', gap: 3,
           minSize: '12%',
           label: { color: t.ink, fontSize: 12, formatter: p => `${p.name}  ·  ${F.num(p.value)}` },

@@ -94,7 +94,6 @@ window.SCR = window.SCR || {};
 
     const scopeStr = `Category: ${state.cat === 'all' ? 'All' : D.catName(state.cat)} ; Sourcing: ${state.sourcing === 'all' ? 'All' : state.sourcing} ; Region: ${state.region === 'all' ? 'All' : state.region}`;
     SCR.setCrumbs([
-      { label: 'Home', key: 'home' },
       { label: 'Category Leader', key: 'category' },
       { label: 'Node & Material Risk' }
     ], scopeStr);
@@ -143,9 +142,9 @@ window.SCR = window.SCR || {};
 
     /* ===== KPI strip ===== */
     host.appendChild(U.kpiStrip([
-      { icon: 'spend', color: 0, label: 'Category spend (CY, MM USD)', value: F.num(spend) },
+      { icon: 'spend', color: 0, label: 'Spend (CY, MM USD)', value: F.num(spend) },
       { icon: 'risk', color: 5, label: 'VAR (MM USD)', value: F.num(Math.round(varSum)) },
-      { icon: 'dollar', color: 3, label: 'Wtd. AVAR (MM USD)', value: F.num(Math.round(avarSum * 10) / 10) },
+      { icon: 'dollar', color: 3, label: 'Wtd. AVAR', value: F.num(Math.round(avarSum * 10) / 10) },
       { icon: 'truck', color: 1, label: 'Suppliers', value: sups.length, sub: sups.filter(s => s.score >= 3).length + ' high risk', subClass: 'bad' },
       { icon: 'layers', color: 4, label: 'Materials', value: mats.length },
       {
@@ -154,7 +153,7 @@ window.SCR = window.SCR || {};
         onClick: () => { state.sourcing = 'single'; SCR.navigate('category'); }
       },
       {
-        icon: 'gauge', color: 2, label: 'Alternate coverage', value: altCoverage + '%',
+        icon: 'gauge', color: 2, label: 'Alt. coverage', value: altCoverage + '%',
         progress: { pct: altCoverage, color: altCoverage >= 70 ? 'var(--status-good)' : 'var(--status-serious)' },
         sub: 'target ≥ 70%', subClass: altCoverage >= 70 ? 'good' : 'bad'
       }

@@ -80,6 +80,7 @@ window.SCR = window.SCR || {};
 
   function ask(text) {
     appendUser(text);
+    syncFabDot();
     const typing = SCR.ui.el(
       '<div class="msg bot"><div class="bubble typing"><i></i><i></i><i></i></div></div>');
     thread.appendChild(typing);
@@ -310,12 +311,48 @@ window.SCR = window.SCR || {};
     };
   }
 
-  /* ---------------- Panel lifecycle ---------------- */
+  /* ---------------- Panel lifecycle (bottom-right dock) ---------------- */
   function open() {
     panel.classList.add('open');
-    setTimeout(() => input.focus(), 260);
+    document.body.classList.add('copilot-open');
+    setTimeout(() => input.focus(), 240);
   }
-  function close() { panel.classList.remove('open'); }
+  function close() {
+    panel.classList.remove('open');
+    document.body.classList.remove('copilot-open');
+  }
+
+  function welcome() {
+    const d = D();
+    appendBot({
+      tag: AGENTS.copilot,
+      html: `<p>I watch <strong>${d.nodes.length} nodes</strong>, <strong>${d.materials.length} materials</strong>
+        and <strong>${d.products.length} products</strong> for ${esc(d.company)} —
+        ${SCR.fmt.usdM(d.kpis.totalVAR)} of value currently at risk, enterprise resilience
+        <strong>${d.kpis.enterpriseRI}%</strong>.</p>
+        <p>Ask in your own words, or tap a suggestion below.</p>`
+    });
+  }
+
+  function reset() {
+    if (!thread) return;
+    thread.innerHTML = '';
+    welcome();
+    syncFabDot();
+  }
+
+  function syncFabDot() {
+    const fab = document.getElementById('copilotBtn');
+    if (fab) fab.classList.toggle('has-chat', thread && thread.querySelectorAll('.msg.user').length > 0);
+  }
+
+  /** Persona lens hand-off from the switcher: header line, suggestions, fresh thread. */
+  function personaChanged(p) {
+    const line = document.getElementById('copilotPersona');
+    if (line) line.textContent = 'Viewing as ' + p.name;
+    setSuggests(p.suggests);
+    reset();
+  }
 
   function init() {
     panel = document.getElementById('copilot');
@@ -324,6 +361,7 @@ window.SCR = window.SCR || {};
 
     document.getElementById('copilotBtn').addEventListener('click', open);
     document.getElementById('copilotClose').addEventListener('click', close);
+    document.getElementById('copilotReset').addEventListener('click', reset);
     document.getElementById('copilotForm').addEventListener('submit', e => {
       e.preventDefault();
       const text = input.value.trim();
@@ -333,18 +371,8 @@ window.SCR = window.SCR || {};
     });
 
     setSuggests(SUGGESTS);
-
-    const d = D();
-    appendBot({
-      tag: AGENTS.copilot,
-      html: `<p>Good morning. I watch <strong>${d.nodes.length} nodes</strong>,
-        <strong>${d.materials.length} materials</strong> and <strong>${d.products.length} products</strong>
-        across ${d.kpis.countries} markets for ${esc(d.company)} — with
-        ${SCR.fmt.usdM(d.kpis.totalVAR)} of value currently at risk and enterprise resilience at
-        <strong>${d.kpis.enterpriseRI}%</strong>.</p>
-        <p>Ask me about TTR/TTS gaps, value at risk, any supplier or site — or tap a suggestion.</p>`
-    });
+    welcome();
   }
 
-  SCR.copilot = { init, open, close, setSuggests };
+  SCR.copilot = { init, open, close, setSuggests, personaChanged, reset };
 })();

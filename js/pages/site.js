@@ -63,7 +63,7 @@ window.SCR = window.SCR || {};
      ===================================================== */
   function renderPicker(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
-    SCR.setCrumbs([{ label: 'Home', key: 'home' }, { label: 'SC Site Leader' }]);
+    SCR.setCrumbs([{ label: 'SC Site Leader' }]);
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">SC Site Leader :</span><h1>Which site are you interested in exploring?</h1>
@@ -115,7 +115,6 @@ window.SCR = window.SCR || {};
     const factors = SITE_FACTORS[state.site];
 
     SCR.setCrumbs([
-      { label: 'Home', key: 'home' },
       { label: 'SC Site Leader', key: 'site', opts: { reset: true } },
       { label: site.name }
     ], `Site: ${site.name} ; Focus: ${site.focus}`);
@@ -138,16 +137,16 @@ window.SCR = window.SCR || {};
 
     /* ===== KPI strip ===== */
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 0, label: 'NTS served (MM USD)', value: F.num(site.nts) },
+      { icon: 'risk', color: 0, label: 'NTS served', value: F.num(site.nts) },
       { icon: 'box', color: 4, label: 'Products', value: site.products.length },
-      { icon: 'globe', color: 2, label: 'Markets dependent', value: site.markets },
+      { icon: 'globe', color: 2, label: 'Markets', value: site.markets },
       { icon: 'truck', color: 1, label: 'Inbound suppliers', value: site.suppliersIn, sub: mats.length + ' materials' },
       {
-        icon: 'gap', color: 3, label: 'Shortest survival (TTS)', value: site.ttsMin + 'd',
+        icon: 'gap', color: 3, label: 'Shortest TTS', value: site.ttsMin + 'd',
         sub: critical.length + ' materials can stop the site', subClass: critical.length ? 'bad' : 'good'
       },
       {
-        icon: 'gauge', color: 5, label: 'Site resilience %', value: F.ri(site.ri),
+        icon: 'gauge', color: 5, label: 'Resilience %', value: F.ri(site.ri),
         progress: { pct: site.ri, color: SCR.risk.riColor(site.ri) },
         sub: SCR.risk.riBand(site.ri) + ' · utilization ' + site.utilization + '%'
       },
