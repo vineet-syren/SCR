@@ -1,23 +1,13 @@
 /* ============================================================
    SCR · pages/agents.js
-   AI Agents — the agentic layer. Six live agents (each opens a
-   360° drawer with its activity + quick actions) · approval
-   queue for agent recommendations · full activity feed ·
-   daily digest generator.
+   AI Agents — the agentic layer. Approval queue for agent
+   recommendations · full activity feed (rows open the agent's
+   360° drawer) · daily digest generator.
    ============================================================ */
 window.SCR = window.SCR || {};
 
 (function () {
   'use strict';
-
-  const ICONS = {
-    radar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.1 4.9A10 10 0 1 0 22 12"/><path d="M16.2 7.8A6 6 0 1 0 18 12"/><circle cx="12" cy="12" r="1.6"/><path d="m12 12 7-7"/></svg>',
-    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>',
-    gauge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 14a8 8 0 1 1 16 0"/><path d="m12 14 4-4"/><path d="M4 19h16"/></svg>',
-    route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.4"/><circle cx="18" cy="5" r="2.4"/><path d="M8.4 19H15a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h6.6"/></svg>',
-    flow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h5a4 4 0 0 1 4 4v5"/><path d="m6 9v6a4 4 0 0 0 4 4h1"/></svg>',
-    branch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>'
-  };
 
   /* What each agent watches, and the moves it can hand off. */
   const AGENT_DETAIL = {
@@ -131,28 +121,6 @@ window.SCR = window.SCR || {};
 
   function render(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
-
-    /* ===== Agent cards (each opens its 360° drawer) ===== */
-    const agentGrid = U.el('<div class="agent-grid" style="margin-bottom:16px"></div>');
-    D.agents.forEach(a => {
-      const card = U.el(`<div class="agent-card clickable">
-        <div class="agent-top">
-          <span class="agent-icon" style="background:color-mix(in srgb, var(--series-${a.color}) 14%, transparent);color:var(--series-${a.color})">${ICONS[a.icon] || ICONS.radar}</span>
-          <div>
-            <div class="agent-name">${U.esc(a.name)}</div>
-            <div class="agent-role">${U.esc(a.role)}</div>
-          </div>
-          <span class="agent-status"><span class="pulse"></span>LIVE</span>
-        </div>
-        <div class="agent-stats">
-          ${a.stats.map(([l, v]) => `<div class="agent-stat"><div class="as-val">${typeof v === 'number' && v % 1 !== 0 ? v.toFixed(1) : F.num(v)}</div><div class="as-label">${U.esc(l)}</div></div>`).join('')}
-        </div>
-        <div class="agent-foot">Open agent 360 →</div>
-      </div>`);
-      card.addEventListener('click', () => openAgent(a));
-      agentGrid.appendChild(card);
-    });
-    host.appendChild(agentGrid);
 
     const grid = U.el('<div class="grid grid-12"></div>');
     host.appendChild(grid);

@@ -60,7 +60,7 @@ window.SCR = window.SCR || {};
       return Object.assign(SCR.theme.baseOption(), {
         tooltip: Object.assign(SCR.theme.baseOption().tooltip, { formatter: p => cfg.tooltip(p.data.meta) }),
         legend: { show: false },
-        grid: { left: 46, right: 18, top: 14, bottom: 44, containLabel: true },
+        grid: { left: 64, right: 18, top: 14, bottom: 44, containLabel: true },
         xAxis: SCR.theme.valAxis({
           name: cfg.xName, nameLocation: 'middle', nameGap: 26,
           nameTextStyle: { color: t.ink3, fontSize: 11 },

@@ -94,6 +94,12 @@ window.SCR = window.SCR || {};
     });
     funnelCard.id = 'actFunnel';
     grid.appendChild(funnelCard);
+    /* Let the funnel absorb whatever height the inbox column sets,
+       so the card never shows dead space below its content. */
+    const funnelBody = funnelCard.querySelector('.card-body');
+    funnelBody.style.display = 'flex';
+    funnelBody.style.flexDirection = 'column';
+    funnelCard._chartEl.style.cssText = 'flex:1;height:auto;min-height:370px';
     SCR.charts.mount(funnelCard._chartEl, () => {
       const t = SCR.theme.tokens();
       const ord = t.ordinal;
@@ -120,6 +126,42 @@ window.SCR = window.SCR || {};
         }]
       });
     });
+
+    /* Pipeline health — conversion facts, stage-to-stage rates and
+       the approval hand-off, filling the column under the funnel. */
+    const fn = D.funnel;
+    const stageConv = fn.slice(1).map((s, i) => ({
+      label: `${fn[i].stage} → ${s.stage}`,
+      counts: `${F.num(fn[i].value)} → ${F.num(s.value)}`,
+      pct: Math.round(s.value / fn[i].value * 100)
+    }));
+    const pending = D.recommendations.filter(r => r.status === 'pending');
+    const pendingExposure = pending.reduce((a, r) => a + r.exposure, 0);
+    const health = U.el(`<div style="margin-top:4px">
+      <div class="facts">
+        <div class="fact"><div class="f-label">Signal → executed</div><div class="f-value">${(fn[fn.length - 1].value / fn[0].value * 100).toFixed(1)}%</div></div>
+        <div class="fact"><div class="f-label">Approved, in execution</div><div class="f-value">${F.num(fn[fn.length - 2].value - fn[fn.length - 1].value)}</div></div>
+        <div class="fact"><div class="f-label">AVAR mitigated YTD</div><div class="f-value">${F.usdM(D.kpis.mitigatedYtd)}</div></div>
+      </div>
+      <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:16px 0 4px">Stage conversion</div>
+      ${stageConv.map(c => `<div class="flex aic gap12" style="margin:8px 0">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(c.label)}</div>
+          <div style="font-size:11px;color:var(--ink-3)">${c.counts}</div>
+        </div>
+        <span class="meter" style="width:150px">
+          <span class="meter-track"><span class="meter-fill" style="width:${c.pct}%;background:var(--accent)"></span></span>
+          <span class="meter-val">${c.pct}%</span>
+        </span>
+      </div>`).join('')}
+      <div class="flex aic gap8" style="margin-top:14px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+        <div style="flex:1;font-size:12.5px;color:var(--ink-2)"><strong style="color:var(--ink)">${pending.length} proposals awaiting approval</strong> — protects ${F.usdM(pendingExposure)} if executed</div>
+        <button class="btn btn-sm btn-primary">Review</button>
+      </div>
+    </div>`);
+    health.style.flexShrink = '0';
+    health.querySelector('.btn').addEventListener('click', () => SCR.navigate('agents'));
+    funnelBody.appendChild(health);
 
     /* ===== Gantt ===== */
     grid.appendChild(U.el('<div class="section-title col-12">Resilience programs</div>'));
