@@ -18,12 +18,13 @@ window.SCR = window.SCR || {};
 
     /* ===== KPI strip ===== */
     const open = D.alerts.filter(a => a.status !== 'closed');
+    const go = id => () => U.scrollToCard(document.getElementById(id));
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 5, label: 'Open alerts', value: open.length, sub: D.kpis.criticalAlerts + ' critical', subClass: 'bad' },
-      { icon: 'dollar', color: 3, label: 'Exposure across open alerts', value: F.usdM(+open.reduce((a, x) => a + x.exposure, 0).toFixed(1)), sub: 'VAR linked' },
-      { icon: 'gap', color: 1, label: 'Actions in flight', value: D.kpis.openActions, sub: D.kpis.overdueActions + ' overdue', subClass: D.kpis.overdueActions ? 'bad' : 'good' },
-      { icon: 'gauge', color: 2, label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), sub: '66 actions executed', subClass: 'good' },
-      { icon: 'globe', color: 0, label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert' }
+      { icon: 'risk', color: 5, label: 'Open alerts', value: open.length, sub: D.kpis.criticalAlerts + ' critical', subClass: 'bad', onClick: go('actInbox') },
+      { icon: 'dollar', color: 3, label: 'Exposure across open alerts', value: F.usdM(+open.reduce((a, x) => a + x.exposure, 0).toFixed(1)), sub: 'VAR linked', onClick: go('actInbox') },
+      { icon: 'gap', color: 1, label: 'Actions in flight', value: D.kpis.openActions, sub: D.kpis.overdueActions + ' overdue', subClass: D.kpis.overdueActions ? 'bad' : 'good', onClick: go('actTrack') },
+      { icon: 'gauge', color: 2, label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), sub: '66 actions executed', subClass: 'good', onClick: go('actGantt') },
+      { icon: 'globe', color: 0, label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert', onClick: go('actFunnel') }
     ]));
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -40,6 +41,7 @@ window.SCR = window.SCR || {};
       title: 'Alert inbox', sub: 'persona-routed exceptions · acknowledge, assign or snooze',
       cols: 7, actions: [segSev]
     });
+    inboxCard.id = 'actInbox';
     grid.appendChild(inboxCard);
     const inboxBody = inboxCard.querySelector('.card-body');
 
@@ -90,6 +92,7 @@ window.SCR = window.SCR || {};
       title: 'Mitigation pipeline', sub: 'FY26 YTD — from sensed signal to executed action',
       cols: 5, chartClass: 'chart-lg'
     });
+    funnelCard.id = 'actFunnel';
     grid.appendChild(funnelCard);
     SCR.charts.mount(funnelCard._chartEl, () => {
       const t = SCR.theme.tokens();
@@ -124,6 +127,7 @@ window.SCR = window.SCR || {};
       title: 'Program timeline', sub: 'assessment → design → build → testing → rollout · dashed line = today',
       cols: 12, chartClass: 'chart-md'
     });
+    ganttCard.id = 'actGantt';
     grid.appendChild(ganttCard);
     SCR.charts.gantt(ganttCard._chartEl, D.gantt);
 
@@ -132,6 +136,7 @@ window.SCR = window.SCR || {};
       title: 'Mitigation action tracker', sub: 'owner, due date, expected AVAR reduction and residual risk before/after',
       cols: 12, flush: true
     });
+    trackCard.id = 'actTrack';
     grid.appendChild(trackCard);
     trackCard.querySelector('.card-body').appendChild(U.table([
       { h: 'Action', cell: a => `<span class="cell-main">${U.esc(a.title)}</span><span class="cell-sub">${U.esc(a.id)} · linked ${U.esc(a.linked)}</span>` },

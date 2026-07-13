@@ -107,7 +107,6 @@ window.SCR = window.SCR || {};
     /* ===== Scope bar ===== */
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">Digital twin :</span><h1>Network Explorer</h1>
-      <span class="ph-note">supplier → material → plant → DC → market · red edge = single-source</span>
     </div>`));
     const g = buildGraph();
     const tierCount = tier => g.nodes.filter(n => n.tier === tier).length;

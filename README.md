@@ -93,15 +93,23 @@ vendor/echarts.min.js Apache ECharts 5.5 (vendored — fully offline)
 
 ## Navigation
 
-Left sidebar (persona-filtered) under a dark app bar: **My cockpit** (Executive Summary ·
-Value Streams · Category & Suppliers · Site Resilience) · **Intelligence** (Network
-Explorer · Scenario Studio) · **Act** (Alerts & Actions · AI Agents) · **Govern**
-(Data Quality). Breadcrumb row with the original's `Links ▾` dropdown (RI Matrix guide,
-metric definitions, missing-data worklist) and `Filter ›` flyouts on persona pages.
-Signature elements modernized from the original screenshots: icon-chip KPI strips with
-the insight bulb, teal-headed tables, the Node Overview drill (product list → Node AVAR
-vs Sales Impacted with AVAR/SALES toggle and in-cell bars), the Category node data
+Collapsible left sidebar (persona-filtered, subtle width animation) under a dark app bar:
+**My cockpit** (Executive Summary · Value Streams · Category & Suppliers · Site
+Resilience) · **Intelligence** (Network Explorer · Scenario Studio) · **Act** (Alerts &
+Actions · AI Agents) · **Govern** (Data Quality). `Filter ›` flyouts scope each persona
+page. Signature elements modernized from the original screenshots: icon-chip KPI strips
+with the insight bulb, teal-headed tables, the Node Overview drill (product list → Node
+AVAR vs Sales Impacted with AVAR/SALES toggle and in-cell bars), the Category node data
 summary (multi-measure in-row bars) and the Node Risk Summary heat matrix.
+
+**Every KPI tile is a drill.** Each icon-chip tile in a strip either scrolls-and-highlights
+the section that explains it (e.g. Nodes → the Top-10 ranking, Spend → the spend tree map)
+or routes to another persona cockpit (Supplier/EM → Category, Plants & DCs → Site). The
+RI tiles open the RI Matrix guide. **AI Agents are functional**: each of the six live
+agent cards opens a 360° drawer with the agent's live stats, what it does, its recent
+activity filtered from the feed, and jump-to actions into the relevant dashboard; the
+approval queue approves/dismisses recommendations (handing off to Execution & Workflow),
+and the daily-digest generator composes a live brief.
 
 ## Design language
 

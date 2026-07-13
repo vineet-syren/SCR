@@ -131,6 +131,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
   function navigate(key, opts) {
     const page = SCR.pages[key];
     if (!page) return;
+    if (SCR.ui && SCR.ui.closeDrawer) SCR.ui.closeDrawer(); // any nav closes an open 360 drawer
     document.querySelectorAll('.nav-item').forEach(n =>
       n.classList.toggle('active', n.dataset.key === key));
     SCR.setCrumbs([{ label: page.title }]); // default; pages may override
@@ -165,15 +166,13 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
   function buildNav() {
     const nav = document.getElementById('nav');
     nav.innerHTML = '';
-    const p = getPersona(currentPersona);
     navGroupsForPersona(currentPersona).forEach(group => {
       if (group.heading) nav.appendChild(SCR.ui.el(`<div class="nav-section">${group.heading}</div>`));
       group.items.forEach(item => {
         const badge = item.badge ? item.badge() : 0;
-        const isHome = item.key === p.home;
         const btn = SCR.ui.el(`<button class="nav-item" data-key="${item.key}" title="${item.label}">
           ${icons[item.key] || ''}<span>${item.label}</span>
-          ${badge ? `<span class="nav-badge">${badge}</span>` : (isHome ? '<span class="nav-home-tag">MY VIEW</span>' : '')}
+          ${badge ? `<span class="nav-badge">${badge}</span>` : ''}
         </button>`);
         btn.addEventListener('click', () => navigate(item.key));
         nav.appendChild(btn);
@@ -242,41 +241,6 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     });
     document.addEventListener('click', e => {
       if (!menu.contains(e.target) && e.target !== pill) menu.classList.remove('open');
-    });
-  }
-
-  /* ================= Links dropdown ================= */
-  function initLinks() {
-    const menu = document.getElementById('linksMenu');
-    const btn = document.getElementById('linksBtn');
-    const items = [
-      { head: 'Guides' },
-      { label: 'RI Matrix guide', icon: 'grid', go: () => SCR.ui.riMatrixGuide() },
-      { label: 'Metric definitions (TTR · TTS · VAR · AVAR · RRE)', icon: 'book', go: () => SCR.ui.metricGuide() },
-      { head: 'Data' },
-      { label: 'Missing data worklist', icon: 'alert', go: () => navigate('quality') },
-      { label: 'Refresh & pipeline log', icon: 'clock', go: () => navigate('quality') },
-      { head: 'Related programs' },
-      { label: 'Supplier Risk Sensing (SRS)', icon: 'ext', go: () => SCR.ui.toast('External link', 'SRS — Supplier Risk Sensing opens in the risk workspace.', '') },
-      { label: 'Business Continuity Portal (BCP)', icon: 'ext', go: () => SCR.ui.toast('External link', 'BCP portal opens in the continuity workspace.', '') }
-    ];
-    const ic = {
-      grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
-      book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5Z"/><path d="M20 22H6.5a2.5 2.5 0 0 1 0-5"/></svg>',
-      alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.5"/></svg>',
-      clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
-      ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"/></svg>'
-    };
-    menu.innerHTML = '';
-    items.forEach(it => {
-      if (it.head) { menu.appendChild(SCR.ui.el(`<div class="lm-head">${it.head}</div>`)); return; }
-      const b = SCR.ui.el(`<button>${ic[it.icon] || ''}<span>${it.label}</span></button>`);
-      b.addEventListener('click', () => { menu.classList.remove('open'); it.go(); });
-      menu.appendChild(b);
-    });
-    btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
-    document.addEventListener('click', e => {
-      if (!document.getElementById('linksDd').contains(e.target)) menu.classList.remove('open');
     });
   }
 
@@ -387,7 +351,6 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
   document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initPersonaSwitcher();
-    initLinks();
     initNotifications();
     initSearch();
     initOverlays();

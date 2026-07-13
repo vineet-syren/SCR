@@ -20,14 +20,16 @@ window.SCR = window.SCR || {};
     const dq = D.dataQuality;
 
     /* ===== KPI strip ===== */
+    const go = id => () => U.scrollToCard(document.getElementById(id));
     host.appendChild(U.kpiStrip([
-      { icon: 'layers', color: 0, label: 'Components mapped', value: F.num(dq.componentsTotal), sub: 'across 24 SKU BOMs' },
-      { icon: 'gap', color: 3, label: 'Missing TTR', value: F.num(dq.missingTTR), sub: '−38 this week', subClass: 'good' },
-      { icon: 'gap', color: 2, label: 'Missing TTS', value: F.num(dq.missingTTS), sub: 'fully covered', subClass: 'good' },
-      { icon: 'gap', color: 6, label: 'Missing RRE', value: F.num(dq.missingRRE), sub: 'assessments pending' },
+      { icon: 'layers', color: 0, label: 'Components mapped', value: F.num(dq.componentsTotal), sub: 'coverage by sector', onClick: go('dqSector') },
+      { icon: 'gap', color: 3, label: 'Missing TTR', value: F.num(dq.missingTTR), sub: '−38 this week · worklist', subClass: 'good', onClick: go('dqWorklist') },
+      { icon: 'gap', color: 2, label: 'Missing TTS', value: F.num(dq.missingTTS), sub: 'fully covered', subClass: 'good', onClick: go('dqWorklist') },
+      { icon: 'gap', color: 6, label: 'Missing RRE', value: F.num(dq.missingRRE), sub: 'assessments pending', onClick: go('dqWorklist') },
       {
         icon: 'gauge', color: 1, label: 'Trust score', value: '92.4%',
-        progress: { pct: 92.4, color: 'var(--status-good)' }, sub: '+1.1 pts vs last month', subClass: 'good'
+        progress: { pct: 92.4, color: 'var(--status-good)' }, sub: '+1.1 pts vs last month', subClass: 'good',
+        onClick: go('dqDomains')
       }
     ]));
 
@@ -39,6 +41,7 @@ window.SCR = window.SCR || {};
       title: 'Completeness by data domain', sub: 'share of required fields populated after the week-28 refresh',
       cols: 6
     });
+    domCard.id = 'dqDomains';
     grid.appendChild(domCard);
     domCard.querySelector('.card-body').innerHTML = dq.domains.map(d => `
       <div class="dq-row">
@@ -57,6 +60,7 @@ window.SCR = window.SCR || {};
       title: 'TTR / TTS / RRE coverage by sector', sub: '% of components with populated resilience inputs',
       cols: 6, chartClass: 'chart-md'
     });
+    secCard.id = 'dqSector';
     grid.appendChild(secCard);
     SCR.charts.mount(secCard._chartEl, () => {
       const t = SCR.theme.tokens();
@@ -87,6 +91,7 @@ window.SCR = window.SCR || {};
       title: 'Missing-data worklist', sub: 'gaps assigned to data owners · auto-generated from the weekly refresh',
       cols: 12, flush: true
     });
+    wlCard.id = 'dqWorklist';
     grid.appendChild(wlCard);
     wlCard.querySelector('.card-body').appendChild(U.table([
       { h: 'Item', cell: w => `<span class="cell-main">${U.esc(w.item)}</span>` },

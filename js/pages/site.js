@@ -67,7 +67,6 @@ window.SCR = window.SCR || {};
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">SC Site Leader :</span><h1>Which site are you interested in exploring?</h1>
-      <span class="ph-note">plant &amp; DC continuity · select a site to open its resilience dashboard</span>
     </div>`));
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -124,7 +123,6 @@ window.SCR = window.SCR || {};
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
       </button>
       <span class="ph-kicker">Site Resilience :</span><h1>${U.esc(site.name)}</h1>
-      <span class="ph-note">${U.esc(site.focus)} · ${U.esc(site.region)}</span>
     </div>`);
     head.querySelector('.backbtn').addEventListener('click', () => { state.site = null; SCR.navigate('site'); });
     host.appendChild(head);
@@ -135,20 +133,23 @@ window.SCR = window.SCR || {};
     const inbound = [...new Set(mats.flatMap(m => m.suppliers))].map(D.supplierById)
       .sort((a, b) => b.score - a.score);
 
-    /* ===== KPI strip ===== */
+    /* ===== KPI strip (every tile drills to its analysis) ===== */
+    const go = id => () => U.scrollToCard(document.getElementById(id));
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 0, label: 'NTS served', value: F.num(site.nts) },
-      { icon: 'box', color: 4, label: 'Products', value: site.products.length },
-      { icon: 'globe', color: 2, label: 'Markets', value: site.markets },
-      { icon: 'truck', color: 1, label: 'Inbound suppliers', value: site.suppliersIn, sub: mats.length + ' materials' },
+      { icon: 'risk', color: 0, label: 'NTS served', value: F.num(site.nts), sub: 'what stops first', onClick: go('siteTts') },
+      { icon: 'box', color: 4, label: 'Products', value: site.products.length, sub: 'made here', onClick: go('siteRf') },
+      { icon: 'globe', color: 2, label: 'Markets', value: site.markets, sub: 'inbound & outbound', onClick: go('siteIn') },
+      { icon: 'truck', color: 1, label: 'Inbound suppliers', value: site.suppliersIn, sub: mats.length + ' materials', onClick: go('siteIn') },
       {
         icon: 'gap', color: 3, label: 'Shortest TTS', value: site.ttsMin + 'd',
-        sub: critical.length + ' materials can stop the site', subClass: critical.length ? 'bad' : 'good'
+        sub: critical.length + ' materials can stop the site', subClass: critical.length ? 'bad' : 'good',
+        onClick: go('siteTts')
       },
       {
         icon: 'gauge', color: 5, label: 'Resilience %', value: F.ri(site.ri),
         progress: { pct: site.ri, color: SCR.risk.riColor(site.ri) },
-        sub: SCR.risk.riBand(site.ri) + ' · utilization ' + site.utilization + '%'
+        sub: SCR.risk.riBand(site.ri) + ' · utilization ' + site.utilization + '%',
+        onClick: () => U.riMatrixGuide()
       },
       {
         icon: 'factory', color: 6, label: 'Capacity at risk', value: site.capacityAtRisk + '%',
@@ -180,6 +181,7 @@ window.SCR = window.SCR || {};
       sub: 'days of cover (TTS) vs the 20-day safety threshold · red = recovery exceeds survival',
       cols: 7, chartClass: 'chart-lg'
     });
+    ttsCard.id = 'siteTts';
     grid.appendChild(ttsCard);
     const ttsChart = SCR.charts.mount(ttsCard._chartEl, () => {
       const t = SCR.theme.tokens();
@@ -265,6 +267,7 @@ window.SCR = window.SCR || {};
       title: 'Inbound supplier risk', sub: 'suppliers feeding this site · click for the 360°',
       cols: 7, flush: true
     });
+    inCard.id = 'siteIn';
     grid.appendChild(inCard);
     inCard.querySelector('.card-body').appendChild(U.table([
       { h: 'Supplier', cell: s => `<span class="cell-main">${U.esc(s.name)}</span><span class="cell-sub">${U.esc(s.city)}, ${U.esc(s.country)}</span>` },
@@ -278,6 +281,7 @@ window.SCR = window.SCR || {};
       title: 'Site risk factors', sub: 'weather · labor · utilities · cyber · quality · logistics',
       cols: 5
     });
+    rfCard.id = 'siteRf';
     grid.appendChild(rfCard);
     const prodChips = prods.slice(0, 8).map(p =>
       `<span class="badge neutral plain" style="cursor:pointer" data-prod="${p.id}">${U.esc(p.name)}</span>`).join('');

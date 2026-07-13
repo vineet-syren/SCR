@@ -38,23 +38,25 @@ window.SCR = window.SCR || {};
     return set;
   }
 
-  function kpiStripFor(prods, host, bulbFn) {
+  function kpiStripFor(prods, host, bulbFn, clicks) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
+    clicks = clicks || {};
     const nts = prods.reduce((a, p) => a + p.nts, 0);
     const avar = +prods.reduce((a, p) => a + p.avar, 0).toFixed(1);
     const ri = +(prods.reduce((a, p) => a + p.ri * p.nts, 0) / nts).toFixed(1);
     const mkts = new Set(prods.flatMap(p => p.markets));
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 0, label: 'NTS (MM USD)', value: F.num(Math.round(nts)) },
-      { icon: 'box', color: 4, label: 'Products', value: prods.length },
-      { icon: 'globe', color: 2, label: 'Countries', value: mkts.size },
-      { icon: 'pin', color: 3, label: 'Nodes', value: nodesOf(prods).size, onClick: () => SCR.navigate('network', prods.length === 1 ? { product: prods[0].id } : {}) },
+      { icon: 'risk', color: 0, label: 'NTS (MM USD)', value: F.num(Math.round(nts)), onClick: clicks.nts },
+      { icon: 'box', color: 4, label: 'Products', value: prods.length, onClick: clicks.products },
+      { icon: 'globe', color: 2, label: 'Countries', value: mkts.size, onClick: clicks.countries },
+      { icon: 'pin', color: 3, label: 'Nodes', value: nodesOf(prods).size, onClick: clicks.nodes || (() => SCR.navigate('network', prods.length === 1 ? { product: prods[0].id } : {})) },
       {
         icon: 'gauge', color: 1, label: 'Resilience %', value: F.ri(ri),
         progress: { pct: ri, color: SCR.risk.riColor(ri) },
-        sub: SCR.risk.riBand(ri) + ' band'
+        sub: SCR.risk.riBand(ri) + ' band · how it is scored',
+        onClick: () => U.riMatrixGuide()
       },
-      { icon: 'dollar', color: 5, label: 'Wtd. AVAR (MM USD)', value: F.num(Math.round(avar * 10) / 10) }
+      { icon: 'dollar', color: 5, label: 'Wtd. AVAR (MM USD)', value: F.num(Math.round(avar * 10) / 10), onClick: clicks.avar }
     ], { bulb: { onClick: bulbFn } }));
     return { nts, avar, ri };
   }
@@ -72,7 +74,6 @@ window.SCR = window.SCR || {};
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">Overview :</span><h1>${state.stream === 'all' ? (state.sector === 'all' ? 'All Value Streams' : D.sectorName(state.sector)) : state.stream}</h1>
-      <span class="ph-note">Persona · Value Chain / Stream Leader — weekly recalc of TTR · TTS · VAR · AVAR · RRE · RI</span>
     </div>`));
 
     const streams = state.sector === 'all'
@@ -120,6 +121,11 @@ window.SCR = window.SCR || {};
             suppliers, plants and DCs put its sales at risk.</li>
         </ul>
         <p class="muted" style="font-size:12.5px">Composed by the Impact &amp; VAR Agent from the current filter scope.</p>`);
+    }, {
+      nts: () => U.scrollToCard(document.getElementById('vsCombo')),
+      products: () => U.scrollToCard(document.getElementById('vsProducts')),
+      countries: () => U.scrollToCard(document.getElementById('vsProducts')),
+      avar: () => U.scrollToCard(document.getElementById('vsCombo'))
     });
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -131,6 +137,7 @@ window.SCR = window.SCR || {};
       sub: 'columns share the $ axis · Resilience % reads as dots on its own aligned panel · click a column to drill',
       cols: 12, chartClass: 'chart-xl'
     });
+    comboCard.id = 'vsCombo';
     grid.appendChild(comboCard);
     const comboProds = prods.slice(0, 18);
     SCR.charts.comboPanel(comboCard._chartEl, {
@@ -168,6 +175,7 @@ window.SCR = window.SCR || {};
       title: 'Products in scope', sub: 'click a row to open the Node Overview drill (product → nodes → exposure)',
       cols: 12, flush: true
     });
+    tblCard.id = 'vsProducts';
     grid.appendChild(tblCard);
     const tbl = U.table([
       { h: 'Brand', cell: p => `<span style="font-size:12.5px">${U.esc(p.brand)}</span>` },
@@ -205,7 +213,6 @@ window.SCR = window.SCR || {};
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
       </button>
       <span class="ph-kicker">Node Overview :</span><h1>${U.esc(prod.name)}</h1>
-      <span class="ph-note">which nodes put this product's sales at risk</span>
     </div>`);
     head.querySelector('.backbtn').addEventListener('click', () => {
       state.view = 'overview'; SCR.navigate('valuestream');
@@ -225,6 +232,12 @@ window.SCR = window.SCR || {};
           <li>Fastest lever: simulate a failure of the top node in the Scenario Studio and pre-approve
             its best mitigation as a playbook.</li>
         </ul>`);
+    }, {
+      nts: () => U.scrollToCard(document.getElementById('noNodeCard')),
+      products: () => U.scrollToCard(document.getElementById('noNodeCard')),
+      countries: () => U.scrollToCard(document.getElementById('noNodeCard')),
+      nodes: () => U.scrollToCard(document.getElementById('noNodeCard')),
+      avar: () => U.scrollToCard(document.getElementById('noGaps'))
     });
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -256,6 +269,7 @@ window.SCR = window.SCR || {};
       sub: 'every supplier, plant and DC this product depends on · click a row for the node 360°',
       cols: 9, flush: true, actions: [seg]
     });
+    nodeCard.id = 'noNodeCard';
     grid.appendChild(nodeCard);
     const nodeBody = nodeCard.querySelector('.card-body');
     nodeBody.style.maxHeight = '432px';
@@ -311,6 +325,7 @@ window.SCR = window.SCR || {};
       sub: 'recovery beyond survival = uncovered days · click nothing, hover for detail',
       cols: 5
     });
+    gapCard.id = 'noGaps';
     grid.appendChild(gapCard);
     gapCard.querySelector('.card-body').innerHTML = U.gapLegend +
       U.gapRows(mats.map(m => ({ name: m.name, sub: m.sub, tts: m.tts, ttr: m.ttr })));

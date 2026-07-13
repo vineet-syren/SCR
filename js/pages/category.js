@@ -53,6 +53,7 @@ window.SCR = window.SCR || {};
   function scatterCard(grid, cfg) {
     const U = SCR.ui, F = SCR.fmt;
     const card = U.card({ title: cfg.title, sub: cfg.sub, cols: 6, chartClass: 'chart-lg' });
+    if (cfg.id) card.id = cfg.id;
     grid.appendChild(card);
     const chart = SCR.charts.mount(card._chartEl, () => {
       const t = SCR.theme.tokens();
@@ -100,7 +101,6 @@ window.SCR = window.SCR || {};
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">Category Leader :</span><h1>${state.cat === 'all' ? 'All Categories' : D.catName(state.cat)}</h1>
-      <span class="ph-note">Persona · Category / Procurement Leader — supplier &amp; material resilience</span>
     </div>`));
 
     const regions = [...new Set(D.suppliers.map(s => s.region))];
@@ -141,12 +141,13 @@ window.SCR = window.SCR || {};
     const altCoverage = Math.round((1 - singles.length / mats.length) * 100);
 
     /* ===== KPI strip ===== */
+    const go = id => () => U.scrollToCard(document.getElementById(id));
     host.appendChild(U.kpiStrip([
-      { icon: 'spend', color: 0, label: 'Spend (CY, MM USD)', value: F.num(spend) },
-      { icon: 'risk', color: 5, label: 'VAR (MM USD)', value: F.num(Math.round(varSum)) },
-      { icon: 'dollar', color: 3, label: 'Wtd. AVAR', value: F.num(Math.round(avarSum * 10) / 10) },
-      { icon: 'truck', color: 1, label: 'Suppliers', value: sups.length, sub: sups.filter(s => s.score >= 3).length + ' high risk', subClass: 'bad' },
-      { icon: 'layers', color: 4, label: 'Materials', value: mats.length },
+      { icon: 'spend', color: 0, label: 'Spend (CY, MM USD)', value: F.num(spend), sub: 'category → sub-category', onClick: go('catTree') },
+      { icon: 'risk', color: 5, label: 'VAR (MM USD)', value: F.num(Math.round(varSum)), sub: 'VAR vs RRE', onClick: go('catRre') },
+      { icon: 'dollar', color: 3, label: 'Wtd. AVAR', value: F.num(Math.round(avarSum * 10) / 10), sub: 'node data summary', onClick: go('catNodeData') },
+      { icon: 'truck', color: 1, label: 'Suppliers', value: sups.length, sub: sups.filter(s => s.score >= 3).length + ' high risk', subClass: 'bad', onClick: go('catRisk') },
+      { icon: 'layers', color: 4, label: 'Materials', value: mats.length, sub: 'VAR vs RRE', onClick: go('catRre') },
       {
         icon: 'gap', color: 6, label: 'Single-source', value: singles.length,
         sub: singles.filter(m => m.score >= 2.8).length + ' risky', subClass: 'bad',
@@ -155,7 +156,8 @@ window.SCR = window.SCR || {};
       {
         icon: 'gauge', color: 2, label: 'Alt. coverage', value: altCoverage + '%',
         progress: { pct: altCoverage, color: altCoverage >= 70 ? 'var(--status-good)' : 'var(--status-serious)' },
-        sub: 'target ≥ 70%', subClass: altCoverage >= 70 ? 'good' : 'bad'
+        sub: 'target ≥ 70%', subClass: altCoverage >= 70 ? 'good' : 'bad',
+        onClick: go('catAlt')
       }
     ], {
       bulb: {
@@ -183,6 +185,7 @@ window.SCR = window.SCR || {};
 
     /* ===== VAR vs RRE scatter (from the original) ===== */
     scatterCard(grid, {
+      id: 'catRre',
       title: 'VAR vs RRE by material',
       sub: 'bubble size = dependent NTS · drag the sliders to zoom · click for the material 360°',
       xName: 'VAR (MM USD)', yName: 'RRE — residual risk', yMin: 0, yMax: 1,
@@ -199,6 +202,7 @@ window.SCR = window.SCR || {};
 
     /* ===== VAR vs Current Year Spend scatter (from the original) ===== */
     scatterCard(grid, {
+      id: 'catSpend',
       title: 'VAR vs Current-Year Spend by supplier',
       sub: 'business exposure vs procurement spend · bubble size = AVAR · click for the supplier 360°',
       xName: 'VAR (MM USD)', yName: 'CY Spend (MM USD)',
@@ -219,6 +223,7 @@ window.SCR = window.SCR || {};
       sub: 'RRE trend · dependent NTS · sales impacted · VAR · AVAR per supplier node · click a row for the 360°',
       cols: 12, flush: true
     });
+    nodeCard.id = 'catNodeData';
     grid.appendChild(nodeCard);
     const nBody = nodeCard.querySelector('.card-body');
     nBody.style.maxHeight = '430px';
@@ -252,6 +257,7 @@ window.SCR = window.SCR || {};
       sub: 'internal drivers + external feeds (Excel/BSI) normalized 0–1 · red = high · click a row for the 360°',
       cols: 12, flush: true
     });
+    riskCard.id = 'catRisk';
     grid.appendChild(riskCard);
     const rBody = riskCard.querySelector('.card-body');
     rBody.style.maxHeight = '380px';
@@ -280,6 +286,7 @@ window.SCR = window.SCR || {};
       sub: 'tree map of current-year spend · click to zoom',
       cols: 5, chartClass: 'chart-lg'
     });
+    treeCard.id = 'catTree';
     grid.appendChild(treeCard);
     SCR.charts.mount(treeCard._chartEl, () => {
       const t = SCR.theme.tokens();
@@ -341,6 +348,7 @@ window.SCR = window.SCR || {};
       title: 'Alternate sourcing opportunities', sub: 'risky single-source materials — qualification recommended (FR-CAT-07)',
       cols: 12, flush: true
     });
+    altCard.id = 'catAlt';
     grid.appendChild(altCard);
     const opp = D.materials.filter(m => m.singleSource && m.score >= 2.8)
       .sort((a, b) => b.avar - a.avar);

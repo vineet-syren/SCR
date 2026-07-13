@@ -283,6 +283,15 @@ window.SCR = window.SCR || {};
     }).join('');
   }
 
+  /** Smooth-scroll a section card into view with a brief highlight ring. */
+  function scrollToCard(node) {
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    node.style.transition = 'box-shadow .35s';
+    node.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent)';
+    setTimeout(() => { node.style.boxShadow = ''; }, 1400);
+  }
+
   /* Create-mitigation-action helper (used across pages/drawers) */
   function createAction(context) {
     toast('Mitigation action drafted',
@@ -628,7 +637,7 @@ window.SCR = window.SCR || {};
   SCR.ui = {
     el, esc, badge, riBadge, statusBadge, scoreSpan, riSpan, meter, riMeter,
     gapRows, gapLegend, dimBars, kpiStrip, cellBar, heatPill, filterBlock, table, card,
-    riMatrixGuide, metricGuide,
+    riMatrixGuide, metricGuide, scrollToCard,
     toast, modal, closeModal, createAction,
     openDrawer, closeDrawer,
     openSupplier, openMaterial, openProduct, openSite, openAlert

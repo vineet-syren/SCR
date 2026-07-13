@@ -135,7 +135,6 @@ window.SCR = window.SCR || {};
 
     host.appendChild(U.el(`<div class="page-head">
       <span class="ph-kicker">Supply Chain Resilience :</span><h1>Executive Summary</h1>
-      <span class="ph-note">Persona · Risk &amp; Resilience Leader — holistic view across value streams</span>
     </div>`));
 
     /* ===== Filter flyout ===== */
@@ -165,15 +164,16 @@ window.SCR = window.SCR || {};
     prods.forEach(p => p.materials.forEach(m => D.materialById(m).suppliers.forEach(s => supSet.add(s))));
     const siteSet = new Set(prods.flatMap(p => p.plants.concat(p.dcs)));
 
-    /* ===== KPI strip (signature) ===== */
+    /* ===== KPI strip (every tile drills to its analysis) ===== */
+    const go = id => () => U.scrollToCard(document.getElementById(id));
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 0, label: 'NTS', value: F.num(Math.round(nts)), sub: 'MM USD' },
-      { icon: 'dollar', color: 5, label: 'Wtd. AVAR', value: F.num(Math.round(avar * 10) / 10), sub: F.usdM(+prods.reduce((a, p) => a + p.var, 0).toFixed(1)) + ' VAR', subClass: 'bad' },
-      { icon: 'box', color: 4, label: 'Products', value: prods.length, onClick: () => SCR.navigate('valuestream', { sector: state.sector }) },
-      { icon: 'globe', color: 2, label: 'Countries', value: mkts.size },
-      { icon: 'pin', color: 3, label: 'Nodes', value: supSet.size + siteSet.size, onClick: () => SCR.navigate('network') },
-      { icon: 'truck', color: 1, label: 'Supplier / EM', value: supSet.size, onClick: () => SCR.navigate('category') },
-      { icon: 'factory', color: 6, label: 'Plants & DCs', value: siteSet.size, onClick: () => SCR.navigate('site') }
+      { icon: 'risk', color: 0, label: 'NTS', value: F.num(Math.round(nts)), sub: 'MM USD · open Value Streams', onClick: () => SCR.navigate('valuestream', { sector: state.sector }) },
+      { icon: 'dollar', color: 5, label: 'Wtd. AVAR', value: F.num(Math.round(avar * 10) / 10), sub: F.usdM(+prods.reduce((a, p) => a + p.var, 0).toFixed(1)) + ' VAR', subClass: 'bad', onClick: go('exExposure') },
+      { icon: 'box', color: 4, label: 'Products', value: prods.length, sub: 'by Wtd. AVAR', onClick: go('exExposure') },
+      { icon: 'globe', color: 2, label: 'Countries', value: mkts.size, sub: 'region × sector mix', onClick: go('exMekko') },
+      { icon: 'pin', color: 3, label: 'Nodes', value: supSet.size + siteSet.size, sub: 'top-10 ranking', onClick: go('exTopNodes') },
+      { icon: 'truck', color: 1, label: 'Supplier / EM', value: supSet.size, sub: 'open Category Leader', onClick: () => SCR.navigate('category') },
+      { icon: 'factory', color: 6, label: 'Plants & DCs', value: siteSet.size, sub: 'open Site Resilience', onClick: () => SCR.navigate('site') }
     ], { bulb: { onClick: () => openInsights(prods) } }));
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -185,6 +185,7 @@ window.SCR = window.SCR || {};
       sub: 'ranked by adjusted exposure · click a row for the SKU 360°',
       cols: 6, flush: true
     });
+    prodCard.id = 'exExposure';
     grid.appendChild(prodCard);
     const body = prodCard.querySelector('.card-body');
     body.style.maxHeight = '424px';
@@ -213,6 +214,7 @@ window.SCR = window.SCR || {};
       sub: 'suppliers, plants and DCs · click a bar for the node 360°',
       cols: 6, chartClass: 'chart-lg', actions: [seg]
     });
+    nodesCard.id = 'exTopNodes';
     grid.appendChild(nodesCard);
     const rankedNodes = () => D.nodes.slice().sort((a, b) => b[rankBy] - a[rankBy]).slice(0, 10).reverse();
     const nodesChart = SCR.charts.mount(nodesCard._chartEl, () => {
@@ -300,6 +302,7 @@ window.SCR = window.SCR || {};
       title: 'NTS by region × sector (mekko)', sub: 'column width = regional NTS · segment = sector share',
       cols: 7, chartClass: 'chart-md'
     });
+    mekkoCard.id = 'exMekko';
     grid.appendChild(mekkoCard);
     SCR.charts.mekko(mekkoCard._chartEl, mekkoData());
 
