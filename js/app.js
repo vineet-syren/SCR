@@ -63,7 +63,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
     network: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="5" cy="6" r="2.1"/><circle cx="19" cy="6" r="2.1"/><circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="18" r="2.1"/><circle cx="19" cy="18" r="2.1"/><path d="M6.8 7.3 10 10.4M17.2 7.3 14 10.4M6.8 16.7 10 13.6M17.2 16.7 14 13.6"/></svg>',
     scenario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',
     actions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 20h20Z"/><path d="M12 9v5"/><path d="M12 17.5v.5"/></svg>',
-    agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2"/><circle cx="9" cy="14" r="1.2"/><circle cx="15" cy="14" r="1.2"/><path d="M9 17.5h6"/></svg>',
+    agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h1.5A2.5 2.5 0 0 1 19 6.5v12a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18.5v-12A2.5 2.5 0 0 1 7.5 4H9"/><rect x="9" y="2.5" width="6" height="3" rx="1.2"/><path d="m9 13.2 2.1 2.1 4-4.6"/></svg>',
     quality: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 20 6.5V13c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6.5Z"/><path d="m9 12 2 2 4-4.5"/></svg>'
   };
 
@@ -88,7 +88,7 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
       heading: 'Act',
       items: [
         { key: 'actions', label: 'Alerts & Actions', badge: () => SCR.data.alerts.filter(a => a.sev === 'critical' && a.status !== 'closed').length },
-        { key: 'agents', label: 'AI Agents', personas: ['rrl', 'vsl', 'cat'], badge: () => SCR.data.recommendations.filter(r => r.status === 'pending').length }
+        { key: 'agents', label: 'Recommendations', personas: ['rrl', 'vsl', 'cat'], badge: () => SCR.data.recommendations.filter(r => r.status === 'pending').length }
       ]
     },
     {

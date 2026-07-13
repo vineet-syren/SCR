@@ -1,8 +1,8 @@
 /* ============================================================
    SCR · pages/agents.js
-   AI Agents — the agentic layer. Approval queue for agent
-   recommendations · full activity feed (rows open the agent's
-   360° drawer) · daily digest generator.
+   Recommendations — the agentic layer's output. Approval queue
+   for agent recommendations · full activity feed (rows open the
+   agent's 360° drawer) · daily digest generator.
    ============================================================ */
 window.SCR = window.SCR || {};
 
@@ -201,7 +201,7 @@ window.SCR = window.SCR || {};
   }
 
   SCR.registerPage('agents', {
-    title: 'AI Agents',
+    title: 'Recommendations',
     render
   });
 })();

@@ -244,7 +244,7 @@ window.SCR = window.SCR || {};
       html: `<p>${risky.length} single-source materials sit above the 2.8 risk threshold. Proposed sequence for the three most exposed:</p>
         <ul>${steps}</ul>
         <p><strong>Execution & Workflow Agent:</strong> 3 qualification tickets drafted — approval routed to the Category Leader.</p>`,
-      actions: [{ label: 'Review in AI Agents', go: () => SCR.navigate('agents') }],
+      actions: [{ label: 'Review recommendations', go: () => SCR.navigate('agents') }],
       after: () => SCR.ui.toast('Workflow created', '3 alternate-sourcing tickets drafted for single-source materials.', 'good')
     };
   }

@@ -355,7 +355,7 @@ window.SCR = window.SCR || {};
       { h: 'Status', cell: a => U.statusBadge(a.status) }
     ], topAlerts, a => U.openAlert(a.id)));
 
-    const btnAgents = U.el('<button class="btn btn-sm">Open AI Agents</button>');
+    const btnAgents = U.el('<button class="btn btn-sm">Open Recommendations</button>');
     btnAgents.addEventListener('click', () => SCR.navigate('agents'));
     const btnBrief = U.el('<button class="btn btn-sm btn-primary">Generate exec brief</button>');
     btnBrief.addEventListener('click', openExecBrief);
