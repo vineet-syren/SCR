@@ -312,7 +312,7 @@ window.SCR = window.SCR || {};
           <div class="reco-meta">
             <span class="rm">Risk removed<strong class="good">−${F.usdM(+(r.atRisk * o.cut).toFixed(1))}</strong></span>
             <span class="rm">Cost<strong>${F.usdM(o.cost)}</strong></span>
-            <span class="rm">Time to effect<strong style="font-size:12.5px">${U.esc(o.time)}</strong></span>
+            <span class="rm">Time to effect<strong style="font-size:14px">${U.esc(o.time)}</strong></span>
           </div>
           <div class="reco-actions">
             <button class="btn btn-sm btn-good" data-apply="${i}">Create action</button>
@@ -347,6 +347,34 @@ window.SCR = window.SCR || {};
 
     update();
   }
+
+  /* Run the twin on a node without opening the Studio, so a "simulate this"
+     affordance can answer in place instead of navigating the user away.
+     State is saved and restored, so an inline run never disturbs whatever the
+     Studio itself is currently set to. */
+  function simulate(nodeId, opts) {
+    const saved = Object.assign({}, state);
+    try {
+      if (nodeId) state.node = nodeId;
+      if (opts && opts.days != null) state.days = opts.days;
+      if (opts && opts.sev != null) state.sev = opts.sev;
+      if (opts && opts.type) state.type = opts.type;
+      const r = compute();
+      return Object.assign({}, r, { days: state.days, sev: state.sev, type: state.type, node: r.node });
+    } finally {
+      Object.assign(state, saved);
+    }
+  }
+
+  /** Open the Studio already set to this node. */
+  function openStudio(nodeId, opts) {
+    if (nodeId) state.node = nodeId;
+    if (opts && opts.days != null) state.days = opts.days;
+    if (opts && opts.sev != null) state.sev = opts.sev;
+    SCR.navigate('scenario');
+  }
+
+  SCR.scenario = { simulate, openStudio };
 
   SCR.registerPage('scenario', {
     title: 'Scenario Studio',

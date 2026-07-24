@@ -62,7 +62,7 @@ window.SCR = window.SCR || {};
       </div>`;
     }).join('');
   }
-  const gapLegend = `<div class="flex aic gap12" style="font-size:12px;color:var(--ink-3);margin-bottom:10px">
+  const gapLegend = `<div class="flex aic gap12" style="font-size:13px;color:var(--ink-3);margin-bottom:10px">
     <span class="flex aic gap8"><span style="width:14px;height:7px;border-radius:4px;background:var(--series-1)"></span>TTS · survive</span>
     <span class="flex aic gap8"><span style="width:14px;height:7px;border-radius:4px;background:var(--status-serious)"></span>TTR · recover</span>
   </div>`;
@@ -133,7 +133,7 @@ window.SCR = window.SCR || {};
   function heatPill(v) {
     // v in 0–1; green (low) → red (high), like the original risk summary
     const c = v >= 0.6 ? '#dc2626' : v >= 0.45 ? '#ea580c' : v >= 0.3 ? '#d97706' : '#15803d';
-    return `<span style="display:block;text-align:center;background:${c};color:#fff;font-weight:700;font-size:11.5px;border-radius:5px;padding:3px 0;min-width:52px;font-variant-numeric:tabular-nums">${v.toFixed(2)}</span>`;
+    return `<span style="display:block;text-align:center;background:${c};color:#fff;font-weight:700;font-size:12.5px;border-radius:5px;padding:3px 0;min-width:52px;font-variant-numeric:tabular-nums">${v.toFixed(2)}</span>`;
   }
 
   /* ---------------- Filter bar (clean, always-visible inline filters) ---------------- */
@@ -277,7 +277,7 @@ window.SCR = window.SCR || {};
       body.appendChild(el(`<div class="ins-agent">
         <span class="ins-agent-chip">${SPARK}</span>
         <span><strong>${esc(spec.agent || 'Resilience Copilot')}</strong>
-        <span class="muted" style="display:block;font-size:11.5px">read this card and summarised what matters</span></span>
+        <span class="muted" style="display:block;font-size:12.5px">read this card and summarised what matters</span></span>
       </div>`));
       if (spec.reads && spec.reads.length) {
         const facts = el('<div class="facts" style="margin-bottom:14px"></div>');
@@ -307,6 +307,67 @@ window.SCR = window.SCR || {};
     const b = el(`<button class="btn insight-btn" title="AI agent insights for “${esc(title)}”">${SPARK}<span>AI insights</span></button>`);
     b.addEventListener('click', e => { e.stopPropagation(); openInsight(title, insight); });
     return b;
+  }
+
+  /* ---------------- In-place scenario runner ----------------
+     "Simulate this" answers where it was asked rather than navigating to the
+     Studio and losing the context you asked from. The Studio stays one click
+     away for anyone who wants the full controls. */
+  function openScenario(nodeId, opts) {
+    opts = opts || {};
+    if (!SCR.scenario || !SCR.scenario.simulate) { SCR.navigate('scenario'); return; }
+    let r;
+    try { r = SCR.scenario.simulate(nodeId, opts); } catch (_) { r = null; }
+    if (!r || !r.node) { SCR.navigate('scenario'); return; }
+    const F = SCR.fmt;
+    openDrawer('Scenario · digital twin', r.node.name, body => {
+      body.appendChild(el(`<p class="muted" style="font-size:14px;margin:0 0 12px">
+        ${esc(opts.why || 'Failing this node on the twin')} — <strong>${r.days} days</strong> at
+        <strong>${r.sev}% severity</strong>. Recomputed live from the same engine the Studio uses.</p>`));
+
+      const facts = el('<div class="facts" style="margin-bottom:14px"></div>');
+      [
+        ['Sales exposed', F.usdM(r.exposed), 'bad'],
+        ['Absorbed by cover', F.usdM(r.covered), 'good'],
+        ['Residual at risk', F.usdM(r.residual), 'bad']
+      ].forEach(([l, v, tone]) => facts.appendChild(el(
+        `<div class="fact"><div class="f-label">${esc(l)}</div>
+         <div class="f-value" style="color:var(--status-${tone === 'good' ? 'good' : 'critical'})">${v}</div></div>`)));
+      body.appendChild(facts);
+
+      if (r.bindingMat) {
+        body.appendChild(el(`<div class="sim-out-note" style="margin-bottom:14px">
+          Binding constraint: <strong>${esc(r.bindingMat.name)}</strong> —
+          ${F.days(r.bindingMat.tts)} of cover against ${F.days(r.bindingMat.ttr)} to recover.</div>`));
+      }
+
+      const rows = (r.rows || []).slice().sort((a, b) => b.loss - a.loss).slice(0, 6);
+      if (rows.length) {
+        body.appendChild(el('<div class="sec-title">Worst-hit SKUs</div>'));
+        body.appendChild(table(
+          [{ h: 'Product', cell: x => `<span class="cell-main">${esc(x.p.name)}</span>` },
+           { h: 'Revenue lost', cls: 'num', cell: x => F.usdM(+x.loss.toFixed(1)) }],
+          rows, x => openProduct(x.p.id)));
+      }
+
+      const best = (r.opts || [])[0];
+      if (best) {
+        // el() returns one root, so these are appended separately
+        body.appendChild(el('<div class="sec-title" style="margin-top:14px">Best mitigation</div>'));
+        body.appendChild(el(`<p style="font-size:14px;margin:0 0 12px"><strong>${esc(best.name)}</strong> — removes
+          ${(best.cut * 100).toFixed(0)}% of the ${F.usdM(r.atRisk)} at risk for ${F.usdM(best.cost)},
+          in ${esc(best.time)}.</p>`));
+      }
+
+      const row = el('<div class="ins-actions"></div>');
+      const full = el('<button class="btn btn-primary">Open in Scenario Studio</button>');
+      full.addEventListener('click', () => {
+        closeDrawer();
+        SCR.scenario.openStudio(nodeId, opts);
+      });
+      row.appendChild(full);
+      body.appendChild(row);
+    });
   }
 
   /* ---------------- Toast ---------------- */
@@ -384,7 +445,7 @@ window.SCR = window.SCR || {};
             ${badge(s.rating)}
             <span class="badge neutral plain">${esc(s.catName)}</span>
             <span class="badge neutral plain">Tier ${s.tier}</span>
-            <span class="muted" style="font-size:12px">${esc(s.city)}, ${esc(s.country)} · ${esc(s.region)}</span>
+            <span class="muted" style="font-size:13px">${esc(s.city)}, ${esc(s.country)} · ${esc(s.region)}</span>
           </div>
           <div class="facts">
             <div class="fact"><div class="f-label">Node risk score</div><div class="f-value">${scoreSpan(s.score)}</div></div>
@@ -411,7 +472,7 @@ window.SCR = window.SCR || {};
             <div class="reco-head"><span class="reco-title">${esc(a.title)}</span>${statusBadge(a.status)}</div>
             <div class="reco-meta"><span class="rm">Severity<strong class="${a.sev === 'critical' ? 'bad' : ''}">${a.sev}</strong></span>
             <span class="rm">Exposure<strong>${SCR.fmt.usdM(a.exposure)}</strong></span>
-            <span class="rm">Type<strong style="font-size:12.5px">${esc(a.type)}</strong></span></div>
+            <span class="rm">Type<strong style="font-size:14px">${esc(a.type)}</strong></span></div>
           </div>`).join('')}</div>` : ''}
         <div class="drawer-section">
           <h3>Materials supplied (${mats.length})</h3>
@@ -451,7 +512,7 @@ window.SCR = window.SCR || {};
         return Object.assign(SCR.theme.baseOption(), {
           grid: { left: 6, right: 10, top: 8, bottom: 2, containLabel: true },
           tooltip: Object.assign(SCR.theme.baseOption().tooltip, { trigger: 'axis' }),
-          xAxis: SCR.theme.catAxis(D().monthly.months, { axisLabel: { fontSize: 10.5, color: t.ink3, interval: 2 } }),
+          xAxis: SCR.theme.catAxis(D().monthly.months, { axisLabel: { fontSize: 11.5, color: t.ink3, interval: 2 } }),
           yAxis: SCR.theme.valAxis({ min: 0, max: 5, splitNumber: 3 }),
           series: [{
             type: 'line', data: s.trend, symbol: 'circle', symbolSize: 5,
@@ -584,7 +645,7 @@ window.SCR = window.SCR || {};
         return Object.assign(SCR.theme.baseOption(), {
           grid: { left: 6, right: 10, top: 8, bottom: 2, containLabel: true },
           tooltip: Object.assign(SCR.theme.baseOption().tooltip, { trigger: 'axis' }),
-          xAxis: SCR.theme.catAxis(D().monthly.months, { axisLabel: { fontSize: 10.5, color: t.ink3, interval: 2 } }),
+          xAxis: SCR.theme.catAxis(D().monthly.months, { axisLabel: { fontSize: 11.5, color: t.ink3, interval: 2 } }),
           yAxis: SCR.theme.valAxis({ min: 40, max: 100, splitNumber: 3, axisLabel: { formatter: v => v + '%' } }),
           series: [{
             type: 'line', data: p.riTrend, symbol: 'circle', symbolSize: 5,
@@ -670,7 +731,7 @@ window.SCR = window.SCR || {};
           <div class="flex aic gap8" style="margin-bottom:12px">
             ${badge(a.sev === 'critical' ? 'Critical' : a.sev === 'high' ? 'High' : a.sev === 'medium' ? 'Medium' : 'Low')}
             ${statusBadge(a.status)}
-            <span class="muted" style="font-size:12px">Routed to ${esc(a.owner)}</span>
+            <span class="muted" style="font-size:13px">Routed to ${esc(a.owner)}</span>
           </div>
           <div class="facts">
             <div class="fact"><div class="f-label">Exposure (VAR)</div><div class="f-value">${SCR.fmt.usdM(a.exposure)}</div></div>
@@ -679,7 +740,7 @@ window.SCR = window.SCR || {};
           </div>
         </div>
         <div class="drawer-section"><h3>What the agents found</h3>
-          <p style="font-size:13px;color:var(--ink-2);line-height:1.55">${esc(a.detail)}</p>
+          <p style="font-size:14.5px;color:var(--ink-2);line-height:1.55">${esc(a.detail)}</p>
         </div>
         ${sups.length ? `<div class="drawer-section"><h3>Impacted nodes</h3>
           <div style="display:flex;flex-wrap:wrap;gap:6px">${
@@ -693,8 +754,8 @@ window.SCR = window.SCR || {};
           acts.map(x => `<div class="reco">
             <div class="reco-head"><span class="reco-title">${esc(x.title)}</span>${statusBadge(x.status)}</div>
             <div class="reco-meta">
-              <span class="rm">Owner<strong style="font-size:12.5px">${esc(x.owner)}</strong></span>
-              <span class="rm">Due<strong style="font-size:12.5px">${esc(x.due)}</strong></span>
+              <span class="rm">Owner<strong style="font-size:14px">${esc(x.owner)}</strong></span>
+              <span class="rm">Due<strong style="font-size:14px">${esc(x.due)}</strong></span>
               <span class="rm">AVAR cut<strong class="good">${SCR.fmt.usdM(x.riskCut)}</strong></span>
               ${x.rrePre != null ? `<span class="rm">RRE<strong>${x.rrePre} → ${x.rrePost}</strong></span>` : ''}
             </div>
@@ -709,7 +770,7 @@ window.SCR = window.SCR || {};
   SCR.ui = {
     el, esc, badge, riBadge, statusBadge, scoreSpan, riSpan, meter, riMeter,
     gapRows, gapLegend, dimBars, kpiStrip, cellBar, heatPill, filterBlock, table, card,
-    riMatrixGuide, metricGuide, scrollToCard, openInsight, insightBtn,
+    riMatrixGuide, metricGuide, scrollToCard, openInsight, insightBtn, openScenario,
     toast, modal, closeModal, createAction,
     openDrawer, closeDrawer,
     openSupplier, openMaterial, openProduct, openSite, openAlert

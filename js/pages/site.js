@@ -78,14 +78,14 @@ window.SCR = window.SCR || {};
       const card = U.el(`<div class="card col-3" style="cursor:pointer">
         <div class="card-body" style="padding:16px 17px 14px">
           <div class="flex aic spread" style="margin-bottom:8px">
-            <strong style="font-size:14.5px">${U.esc(pt.name)}</strong>
+            <strong style="font-size:16px">${U.esc(pt.name)}</strong>
             ${U.riBadge(pt.ri)}
           </div>
-          <div class="muted" style="font-size:12px;margin-bottom:10px">${U.esc(pt.focus)} · ${U.esc(pt.region)}</div>
-          <div class="flex wrap gap12" style="font-size:12px">
-            <span><b style="font-size:15px">${F.usdM(pt.nts)}</b><br/><span class="muted">NTS served</span></span>
-            <span><b style="font-size:15px">${pt.products.length}</b><br/><span class="muted">products</span></span>
-            <span><b style="font-size:15px;color:${crit ? 'var(--status-critical)' : 'var(--status-good)'}">${crit}</b><br/><span class="muted">can stop it</span></span>
+          <div class="muted" style="font-size:13px;margin-bottom:10px">${U.esc(pt.focus)} · ${U.esc(pt.region)}</div>
+          <div class="flex wrap gap12" style="font-size:13px">
+            <span><b style="font-size:16.5px">${F.usdM(pt.nts)}</b><br/><span class="muted">NTS served</span></span>
+            <span><b style="font-size:16.5px">${pt.products.length}</b><br/><span class="muted">products</span></span>
+            <span><b style="font-size:16.5px;color:${crit ? 'var(--status-critical)' : 'var(--status-good)'}">${crit}</b><br/><span class="muted">can stop it</span></span>
           </div>
         </div>
       </div>`);
@@ -173,7 +173,7 @@ window.SCR = window.SCR || {};
       },
       {
         icon: 'factory', color: 6, label: 'Capacity at risk', value: site.capacityAtRisk + '%',
-        onClick: () => SCR.navigate('scenario', { node: site.id })
+        onClick: () => U.openScenario(site.id, { why: 'Taking ' + site.name + ' offline on the twin', days: 21 })
       }
     ], {
       bulb: {
@@ -237,7 +237,7 @@ window.SCR = window.SCR || {};
         grid: { left: 8, right: 34, top: 8, bottom: 4, containLabel: true },
         xAxis: SCR.theme.valAxis({ axisLabel: { formatter: v => v + 'd' } }),
         yAxis: Object.assign(SCR.theme.catAxis(sorted.map(m => m.name).reverse()), {
-          axisLabel: { color: t.ink2, fontSize: 11.5, width: 168, overflow: 'truncate' }
+          axisLabel: { color: t.ink2, fontSize: 12.5, width: 168, overflow: 'truncate' }
         }),
         series: [{
           type: 'bar',
@@ -246,11 +246,11 @@ window.SCR = window.SCR || {};
             itemStyle: { color: m.gap > 0 ? t.status.critical : t.series[0], borderRadius: [0, 4, 4, 0] }
           })).reverse(),
           barMaxWidth: 13,
-          label: { show: true, position: 'right', fontSize: 11, color: t.ink2, formatter: p => p.value + 'd' },
+          label: { show: true, position: 'right', fontSize: 12, color: t.ink2, formatter: p => p.value + 'd' },
           markLine: {
             symbol: 'none',
             lineStyle: { color: t.status.warning, type: 'dashed', width: 1.5 },
-            label: { formatter: '20d safety', color: t.status.warning, fontSize: 10.5 },
+            label: { formatter: '20d safety', color: t.status.warning, fontSize: 11.5 },
             data: [{ xAxis: 20 }]
           }
         }]
@@ -279,7 +279,7 @@ window.SCR = window.SCR || {};
           worst ? `<strong>${U.esc(worst.name)}</strong> is the binding constraint for this site with ${F.days(worst.tts)} of cover against ${F.days(worst.ttr)} to recover.` : '',
           worst && worst.ttr > worst.tts ? `The ${worst.ttr - worst.tts}-day shortfall is what a scenario run would convert into lost sales — worth testing before it happens.` : 'Cover currently exceeds recovery time for this material.'
         ].filter(Boolean),
-        actions: [{ label: 'Run a scenario on this site', onClick: () => SCR.navigate('scenario') }]
+        actions: [{ label: 'Simulate this site', onClick: () => U.openScenario(site.id, { why: 'Taking ' + site.name + ' offline on the twin', days: 21 }) }]
       })
     });
     grid.appendChild(runCard);
@@ -309,7 +309,7 @@ window.SCR = window.SCR || {};
           markLine: {
             symbol: 'none',
             lineStyle: { color: t.status.warning, type: 'dashed', width: 1.5 },
-            label: { formatter: 'safety floor', color: t.status.warning, fontSize: 10.5 },
+            label: { formatter: 'safety floor', color: t.status.warning, fontSize: 11.5 },
             data: [{ yAxis: 10 }]
           }
         }]
@@ -378,7 +378,7 @@ window.SCR = window.SCR || {};
     rfCard.querySelector('.card-body').innerHTML =
       U.dimBars(factors) +
       `<div style="margin-top:14px">
-        <h3 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:8px">Products made here</h3>
+        <h3 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:8px">Products made here</h3>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${prodChips}</div>
       </div>`;
     rfCard.querySelectorAll('[data-prod]').forEach(n =>
@@ -434,7 +434,7 @@ window.SCR = window.SCR || {};
         ${critical.length ? `The binding constraint is <strong>${U.esc(critical[0].name)}</strong> — recovery ${critical[0].ttr}d vs ${critical[0].tts}d cover.` : 'No component currently recovers slower than it survives.'}
       </div>`;
     const simBtn = U.el('<button class="btn btn-primary">Simulate site outage</button>');
-    simBtn.addEventListener('click', () => SCR.navigate('scenario', { node: site.id }));
+    simBtn.addEventListener('click', () => U.openScenario(site.id, { why: 'Taking ' + site.name + ' offline on the twin', days: 21 }));
     simCard.querySelector('.card-body').appendChild(simBtn);
   }
 

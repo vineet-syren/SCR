@@ -63,7 +63,7 @@ window.SCR = window.SCR || {};
         <div class="drawer-section">
           <div class="flex aic gap8" style="margin-bottom:12px">
             <span class="agent-status"><span class="pulse"></span>LIVE</span>
-            <span class="muted" style="font-size:12px">${U.esc(a.role)}</span>
+            <span class="muted" style="font-size:13px">${U.esc(a.role)}</span>
           </div>
           <div class="facts">
             ${a.stats.map(([l, v]) => `<div class="fact"><div class="f-label">${U.esc(l)}</div><div class="f-value">${typeof v === 'number' && v % 1 !== 0 ? v.toFixed(1) : F.num(v)}</div></div>`).join('')}
@@ -79,7 +79,7 @@ window.SCR = window.SCR || {};
             <span style="width:9px;height:9px;border-radius:50%;background:var(--series-${a.color});flex-shrink:0;margin-top:6px"></span>
             <div class="feed-body"><div class="f-text">${f.text}</div></div>
             <span class="feed-time">${U.esc(f.time)} UTC</span>
-          </div>`).join('')}</div>` : '<div class="muted" style="font-size:13px">No activity in the last 3 hours.</div>'}
+          </div>`).join('')}</div>` : '<div class="muted" style="font-size:14.5px">No activity in the last 3 hours.</div>'}
         </div>
         <div class="drawer-section">
           <h3>Jump to</h3>
@@ -97,9 +97,9 @@ window.SCR = window.SCR || {};
   function openDigest() {
     const D = SCR.data, F = SCR.fmt, esc = SCR.ui.esc;
     const pending = D.recommendations.filter(r => r.status === 'pending');
-    const h4 = 'font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:15px 0 6px';
+    const h4 = 'font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:15px 0 6px';
     SCR.ui.modal('Daily resilience digest — ' + D.asOf, `
-      <div style="font-size:13.5px;line-height:1.62;color:var(--ink-2)">
+      <div style="font-size:15px;line-height:1.62;color:var(--ink-2)">
         <p style="margin:0">Overnight, the sensing layer processed <strong>231 signals</strong>, matched 42 to network
         nodes and escalated 6. The twin recomputed AVAR on ${F.usdM(52.7)} of exposure and ran 11 scenarios.</p>
         <h4 style="${h4}">Needs a human decision</h4>
@@ -160,12 +160,12 @@ window.SCR = window.SCR || {};
             <span class="reco-title">${U.esc(r.title)}</span>
             <span class="badge neutral plain" style="cursor:pointer" data-alert="${U.esc(r.linked)}">${U.esc(r.linked)}</span>
           </div>
-          <div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">${U.esc(r.detail)}</div>
+          <div style="font-size:14px;color:var(--ink-3);margin-top:4px">${U.esc(r.detail)}</div>
           <div class="reco-meta">
             <span class="rm">Protects<strong>${F.usdM(r.exposure)}</strong></span>
             <span class="rm">Risk cut<strong class="good">${U.esc(r.riskCut)}</strong></span>
             <span class="rm">Cost<strong>${U.esc(r.cost)}</strong></span>
-            <span class="rm">Approvers<strong style="font-size:12px">${U.esc(r.approvers)}</strong></span>
+            <span class="rm">Approvers<strong style="font-size:13px">${U.esc(r.approvers)}</strong></span>
           </div>
           <div class="reco-actions">
             ${r.status === 'pending'

@@ -61,7 +61,7 @@ window.SCR = window.SCR || {};
     const node = SCR.ui.el(`<div class="msg bot">
       <span class="agent-tag">✦ ${esc(a.tag)}</span>
       <div class="bubble">${a.html}${
-        a.followUp ? `<div class="muted" style="font-size:12px;margin-top:8px">Follow-up: try “${esc(a.followUp)}”</div>` : ''
+        a.followUp ? `<div class="muted" style="font-size:13px;margin-top:8px">Follow-up: try “${esc(a.followUp)}”</div>` : ''
       }</div>
     </div>`);
     if (a.actions && a.actions.length) {

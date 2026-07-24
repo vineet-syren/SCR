@@ -63,18 +63,18 @@ window.SCR = window.SCR || {};
         grid: { left: 64, right: 18, top: 14, bottom: 44, containLabel: true },
         xAxis: SCR.theme.valAxis({
           name: cfg.xName, nameLocation: 'middle', nameGap: 26,
-          nameTextStyle: { color: t.ink3, fontSize: 11 },
+          nameTextStyle: { color: t.ink3, fontSize: 12 },
           axisLabel: { formatter: v => F.num(v) }
         }),
         yAxis: SCR.theme.valAxis({
           name: cfg.yName, nameLocation: 'middle', nameGap: 42,
-          nameTextStyle: { color: t.ink3, fontSize: 11 },
+          nameTextStyle: { color: t.ink3, fontSize: 12 },
           min: cfg.yMin, max: cfg.yMax,
           axisLabel: { formatter: cfg.yFmt || (v => F.num(v)) }
         }),
         dataZoom: [
-          { type: 'slider', xAxisIndex: 0, height: 13, bottom: 4, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } },
-          { type: 'slider', yAxisIndex: 0, width: 13, left: 2, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } }
+          { type: 'slider', xAxisIndex: 0, height: 13, bottom: 4, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 11 } },
+          { type: 'slider', yAxisIndex: 0, width: 13, left: 2, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 11 } }
         ],
         series: [{
           type: 'scatter',
@@ -175,7 +175,7 @@ window.SCR = window.SCR || {};
                 qualification actions exist for ${D.actions.filter(a => a.type === 'Alternate supplier').length} of them.</li>
               <li>Alternate coverage is <strong>${altCoverage}%</strong> against the 70% target.</li>
             </ul>
-            <p class="muted" style="font-size:12.5px">Composed by the Mitigation Strategist Agent from the current filter scope.</p>`);
+            <p class="muted" style="font-size:14px">Composed by the Mitigation Strategist Agent from the current filter scope.</p>`);
         }
       }
     }));
@@ -295,8 +295,8 @@ window.SCR = window.SCR || {};
     const maxAvar = Math.max(...supRows.map(s => s.avar));
     const rreTrend = s => s.trend[11] >= s.trend[8] ? '<span class="trend-up">↗</span>' : '<span class="trend-down">↘</span>';
     const ndTbl = U.table([
-      { h: 'Node', cell: s => `<span class="cell-main" style="font-size:12.5px">${U.esc(s.name)}</span><span class="cell-sub">${U.esc(s.city)}, ${U.esc(s.country)} · Tier ${s.tier}</span>` },
-      { h: 'Category', cell: s => `<span style="font-size:12px">${U.esc(s.catName)}</span>` },
+      { h: 'Node', cell: s => `<span class="cell-main" style="font-size:14px">${U.esc(s.name)}</span><span class="cell-sub">${U.esc(s.city)}, ${U.esc(s.country)} · Tier ${s.tier}</span>` },
+      { h: 'Category', cell: s => `<span style="font-size:13px">${U.esc(s.catName)}</span>` },
       { h: 'RRE', cls: 'num', cell: s => {
         const avgRre = +(D.materialsOf(s.id).reduce((a, m) => a + m.rre, 0) / Math.max(1, s.materialsCount)).toFixed(2);
         return `${avgRre.toFixed(2)} ${rreTrend(s)}`;
@@ -345,8 +345,8 @@ window.SCR = window.SCR || {};
     rBody.style.maxHeight = '380px';
     rBody.style.overflowY = 'auto';
     const rTbl = U.table([
-      { h: 'Node', cell: s => `<span class="cell-main" style="font-size:12.5px;white-space:nowrap">${U.esc(s.name)}</span>` },
-      { h: 'Country', cell: s => `<span style="font-size:12px">${U.esc(s.country)}</span>` },
+      { h: 'Node', cell: s => `<span class="cell-main" style="font-size:14px;white-space:nowrap">${U.esc(s.name)}</span>` },
+      { h: 'Country', cell: s => `<span style="font-size:13px">${U.esc(s.country)}</span>` },
       { h: 'Supplier Financial', cell: s => U.heatPill(extFactors(s).fin) },
       { h: 'Supplier Quality', cell: s => U.heatPill(extFactors(s).qual) },
       { h: 'Supplier Reliability', cell: s => U.heatPill(extFactors(s).rel) },
@@ -416,8 +416,8 @@ window.SCR = window.SCR || {};
           type: 'treemap',
           roam: false, nodeClick: 'zoomToNode',
           breadcrumb: { show: true, top: 0, itemStyle: { color: t.surface3, textStyle: { color: t.ink2 } } },
-          label: { show: true, fontSize: 11.5, color: '#fff', formatter: p => p.name + '\n' + F.usdM(p.value) },
-          upperLabel: { show: true, height: 22, color: '#fff', fontSize: 11.5, fontWeight: 600 },
+          label: { show: true, fontSize: 12.5, color: '#fff', formatter: p => p.name + '\n' + F.usdM(p.value) },
+          upperLabel: { show: true, height: 22, color: '#fff', fontSize: 12.5, fontWeight: 600 },
           itemStyle: { borderColor: t.surface, borderWidth: 2, gapWidth: 2 },
           levels: [
             { itemStyle: { borderWidth: 0, gapWidth: 3 } },
@@ -485,7 +485,7 @@ window.SCR = window.SCR || {};
             risky.length ? `${risky.length} of those also recover slower than they survive — qualification there buys days of cover, not just negotiating room.` : 'None of them currently recover slower than they survive.',
             w ? `Start with <strong>${U.esc(w.name)}</strong>: ${F.usdM(w.avar)} AVAR, ${F.days(w.tts)} of cover against ${F.days(w.ttr)} to recover.` : ''
           ].filter(Boolean),
-          actions: w ? [{ label: '360° on ' + w.name, onClick: () => U.openMaterial(w.id) }, { label: 'Model it in Scenario Studio', onClick: () => SCR.navigate('scenario') }] : []
+          actions: w ? [{ label: '360° on ' + w.name, onClick: () => U.openMaterial(w.id) }, { label: 'Simulate losing its supplier', onClick: () => U.openScenario((w.suppliers || [])[0], { why: 'Failing the sole supplier of ' + w.name, days: 30 }) }] : []
         };
       }
     });
@@ -499,7 +499,7 @@ window.SCR = window.SCR || {};
       { h: 'Gap', cls: 'num', cell: m => `<span style="font-weight:700;color:${m.gap > 0 ? 'var(--status-critical)' : 'var(--status-good)'}">${m.gap > 0 ? '−' + m.gap + 'd' : 'OK'}</span>` },
       { h: 'AVAR', cls: 'num', cell: m => F.usdM(m.avar) },
       { h: 'RRE', cls: 'num', cell: m => F.rre(m.rre) },
-      { h: 'Substitution', cell: m => `<span class="muted" style="font-size:12px">${U.esc(m.substitution)}</span>` },
+      { h: 'Substitution', cell: m => `<span class="muted" style="font-size:13px">${U.esc(m.substitution)}</span>` },
       { h: '', cell: m => `<button class="btn btn-sm btn-primary" data-act="${m.id}">Qualify alternate</button>` }
     ], opp));
     altCard.querySelectorAll('[data-act]').forEach(b =>

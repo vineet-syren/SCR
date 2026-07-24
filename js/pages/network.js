@@ -123,38 +123,39 @@ window.SCR = window.SCR || {};
     return { nodes: [...names].map(n => ({ name: n })), links, tierOf, single };
   }
 
-  /* Sankey: material category → plant → DC → region, NTS-attributed */
+  /* Sankey: material category → plant → market region, NTS-attributed.
+     Deliberately three stages, not four: routing every flow through the DC
+     tier as well doubled the crossings without changing the story, and the
+     dependency trace above already carries DC detail. Thin flows are folded
+     away so the picture stays readable rather than exhaustive. */
   function buildSankey() {
     const D = SCR.data;
     const flows = {}; // 'a␟b' -> value
     const bump = (a, b, v) => { const k = a + '␟' + b; flows[k] = (flows[k] || 0) + v; };
     D.products.forEach(p => {
+      if (!p.plants.length) return;
       const perPlant = p.nts / p.plants.length;
       const cats = [...new Set(p.materials.map(m => D.materialById(m).cat))];
       p.plants.forEach(pt => {
         const plant = D.plantById(pt);
+        if (!plant) return;
         cats.forEach(c => bump(D.catName(c), plant.name, perPlant / cats.length));
-        const dcsIn = p.dcs;
-        dcsIn.forEach(dc => bump(plant.name, D.dcById(dc).name, perPlant / dcsIn.length));
-      });
-      p.dcs.forEach(dc => {
-        const d = D.dcById(dc);
-        const served = p.markets.filter(mk => d.markets.includes(mk));
-        const perDc = p.nts / p.dcs.length;
-        if (served.length) {
-          served.forEach(mk => bump(d.name, D.marketById(mk).region + ' markets', perDc / served.length));
-        } else {
-          bump(d.name, d.region + ' markets', perDc);
-        }
+        const regions = [...new Set(p.markets.map(mk => (D.marketById(mk) || {}).region).filter(Boolean))];
+        if (!regions.length) return;
+        regions.forEach(r => bump(plant.name, r + ' markets', perPlant / regions.length));
       });
     });
+    const total = Object.values(flows).reduce((a, b) => a + b, 0) || 1;
     const names = new Set();
     const links = Object.keys(flows).map(k => {
       const [a, b] = k.split('␟');
-      names.add(a); names.add(b);
       return { source: a, target: b, value: +flows[k].toFixed(0) };
-    }).filter(l => l.value >= 8);
-    return { nodes: [...names].map(n => ({ name: n })), links };
+    })
+      // drop the long tail: anything under 1.5% of total flow is noise here
+      .filter(l => l.value / total >= 0.015)
+      .sort((a, b) => b.value - a.value);
+    links.forEach(l => { names.add(l.source); names.add(l.target); });
+    return { nodes: [...names].map(n => ({ name: n })), links, dropped: Object.keys(flows).length - links.length };
   }
 
   /* Open the nodes behind a scope chip. Rows route into the existing 360°
@@ -171,7 +172,7 @@ window.SCR = window.SCR || {};
         return { s, m };
       }).filter(r => r.s && r.m);
       U.openDrawer('Network scope', 'Single-source dependencies', body => {
-        body.appendChild(U.el(`<p class="muted" style="font-size:12.5px;margin:0 0 12px">
+        body.appendChild(U.el(`<p class="muted" style="font-size:14px;margin:0 0 12px">
           ${rows.length} material${rows.length === 1 ? '' : 's'} in ${U.esc(scope)} ${rows.length === 1 ? 'has' : 'have'} exactly one qualified supplier.
           If that supplier stops, the material stops — there is no second source to switch to.</p>`));
         if (!rows.length) { body.appendChild(U.el('<div class="empty">No single-source links in this scope.</div>')); return; }
@@ -186,7 +187,7 @@ window.SCR = window.SCR || {};
 
     const nodes = g.nodes.filter(n => n.tier === tier).sort((a, b) => b.value - a.value);
     U.openDrawer('Network scope', LABEL[tier] + ' in scope', body => {
-      body.appendChild(U.el(`<p class="muted" style="font-size:12.5px;margin:0 0 12px">
+      body.appendChild(U.el(`<p class="muted" style="font-size:14px;margin:0 0 12px">
         ${nodes.length} ${LABEL[tier].toLowerCase()} feeding ${U.esc(scope)}, ranked by the AVAR carried at the node.
         ${OPEN[tier] ? 'Select any row for its 360°.' : ''}</p>`));
       if (!nodes.length) { body.appendChild(U.el('<div class="empty">Nothing in this tier for the current scope.</div>')); return; }
@@ -298,7 +299,7 @@ window.SCR = window.SCR || {};
         series: [{
           type: 'sankey',
           left: 8, right: 128, top: 12, bottom: 8,
-          nodeWidth: 13, nodeGap: 9,
+          nodeWidth: 13, nodeGap: 12,
           nodeAlign: 'left',
           data: trace.nodes.map(n => ({
             name: n.name,
@@ -309,11 +310,11 @@ window.SCR = window.SCR || {};
               ? { color: t.status.critical, opacity: 0.42 }
               : { color: 'gradient', opacity: 0.26 }
           })),
-          lineStyle: { curveness: 0.5 },
+          lineStyle: { curveness: 0.36 },
           // Middle-column labels necessarily sit over outgoing ribbons; a halo in
           // the surface color keeps them legible without hiding the flow.
           label: {
-            color: t.ink2, fontSize: 10.5,
+            color: t.ink2, fontSize: 11.5,
             textBorderColor: t.surface, textBorderWidth: 3,
             formatter: p => p.name.length > 22 ? p.name.slice(0, 21) + '…' : p.name
           },
@@ -334,7 +335,7 @@ window.SCR = window.SCR || {};
     const sank = buildSankey();
     const sankCard = U.card({
       title: 'Value flow by material category',
-      sub: 'enterprise-wide roll-up — not narrowed by the product trace above · category → plant → DC → market region ($M)',
+      sub: 'enterprise-wide roll-up — not narrowed by the product trace above · category → plant → market region ($M)',
       cols: 7, chartClass: 'chart-xl',
       insight: () => {
         const sk = buildSankey();
@@ -345,12 +346,12 @@ window.SCR = window.SCR || {};
         return {
           agent: 'Impact & VAR Agent',
           reads: [
-            { label: 'Flow stages', value: 4 },
+            { label: 'Flow stages', value: 3 },
             { label: 'Widest single flow', value: widest ? F.usdM(+widest.value.toFixed(1)) : '—' },
             { label: 'Largest hub', value: hub ? hub[0] : '—' }
           ],
           points: [
-            'Ribbon width is net sales attributed along that path, so this shows where revenue physically travels — material category, through plant and DC, to market region.',
+            'Ribbon width is net sales attributed along that path — material category, through the plant that converts it, to the market region that sells it. Three stages, not four: routing through DCs as well doubled the crossings without changing the story, and the trace above already carries DC detail.',
             widest ? `The heaviest single flow is <strong>${U.esc(widest.source)} → ${U.esc(widest.target)}</strong> at ${F.usdM(+widest.value.toFixed(1))}.` : 'No flows in scope.',
             hub ? `<strong>${U.esc(hub[0])}</strong> is the biggest convergence point at ${F.usdM(+hub[1].toFixed(1))} passing through it — concentration in the middle of a network is exactly what a single outage exploits.` : ''
           ].filter(Boolean),
@@ -370,14 +371,14 @@ window.SCR = window.SCR || {};
         series: [{
           type: 'sankey',
           left: 8, right: 130, top: 12, bottom: 8,
-          nodeWidth: 14, nodeGap: 10,
+          nodeWidth: 14, nodeGap: 16,
           data: sank.nodes.map((n, i) => ({
             name: n.name,
             itemStyle: { color: t.series[i % 8], borderColor: t.surface }
           })),
           links: sank.links,
-          lineStyle: { color: 'gradient', opacity: 0.28, curveness: 0.5 },
-          label: { color: t.ink2, fontSize: 11 },
+          lineStyle: { color: 'gradient', opacity: 0.26, curveness: 0.36 },
+          label: { color: t.ink2, fontSize: 12 },
           emphasis: { focus: 'adjacency' }
         }]
       });

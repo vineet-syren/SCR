@@ -120,7 +120,7 @@ window.SCR = window.SCR || {};
           <li>Recommended next click: open the worst product's <strong>Node Overview</strong> to see which
             suppliers, plants and DCs put its sales at risk.</li>
         </ul>
-        <p class="muted" style="font-size:12.5px">Composed by the Impact &amp; VAR Agent from the current filter scope.</p>`);
+        <p class="muted" style="font-size:14px">Composed by the Impact &amp; VAR Agent from the current filter scope.</p>`);
     }, {
       nts: () => U.scrollToCard(document.getElementById('vsCombo')),
       products: () => U.scrollToCard(document.getElementById('vsProducts')),
@@ -215,7 +215,7 @@ window.SCR = window.SCR || {};
     tblCard.id = 'vsProducts';
     grid.appendChild(tblCard);
     const tbl = U.table([
-      { h: 'Brand', cell: p => `<span style="font-size:12.5px">${U.esc(p.brand)}</span>` },
+      { h: 'Brand', cell: p => `<span style="font-size:14px">${U.esc(p.brand)}</span>` },
       { h: 'Product', cell: p => `<span class="cell-main">${U.esc(p.name)}</span><span class="cell-sub">${U.esc(p.stream)}</span>` },
       { h: 'NTS (MM USD)', cls: 'num', cell: p => F.num(p.nts) },
       { h: 'Wtd. AVAR', cls: 'num', cell: p => p.avar.toFixed(1) },
@@ -223,7 +223,7 @@ window.SCR = window.SCR || {};
       { h: 'Max TTR', cls: 'num', cell: p => F.days(p.ttrMax) },
       { h: 'TTR > TTS', cell: p => p.gapMax > 0 ? `<span class="badge critical plain">−${p.gapMax}d · ${p.gapCount} comp.</span>` : '<span class="badge low plain">Covered</span>' },
       { h: 'Resilience %', cell: p => U.riMeter(p.ri) },
-      { h: '', cell: () => '<span class="crumb-link" style="font-size:12px;white-space:nowrap">Node overview →</span>' }
+      { h: '', cell: () => '<span class="crumb-link" style="font-size:13px;white-space:nowrap">Node overview →</span>' }
     ], prods, p => { state.view = 'node'; state.product = p.id; SCR.navigate('valuestream'); });
     tbl.querySelector('table').classList.add('tbl-teal');
     tblCard.querySelector('.card-body').appendChild(tbl);
@@ -347,9 +347,9 @@ window.SCR = window.SCR || {};
       const headLabel = measure === 'avar' ? 'Adj Value At Risk (MM USD)' : 'Sales Impacted (MM USD)';
       nodeBody.innerHTML = '';
       const tbl = U.table([
-        { h: 'Node', cell: r => `<span class="cell-main" style="font-size:12.5px">${U.esc(r.name)}</span><span class="cell-sub">${U.esc(r.sub)}</span>` },
+        { h: 'Node', cell: r => `<span class="cell-main" style="font-size:14px">${U.esc(r.name)}</span><span class="cell-sub">${U.esc(r.sub)}</span>` },
         { h: 'Type', cell: r => `<span class="badge neutral plain">${r.type}</span>` },
-        { h: 'Products', cell: () => `<span style="font-size:12.5px">${U.esc(prod.name.slice(0, 16))}…</span>` },
+        { h: 'Products', cell: () => `<span style="font-size:14px">${U.esc(prod.name.slice(0, 16))}…</span>` },
         { h: headLabel, cell: r => U.cellBar(r[measure], max, barColor, F.num(+r[measure].toFixed(1))) },
         { h: 'RI', cls: 'num', cell: r => U.riSpan(r.ri) }
       ], rows, r => { if (r.type === 'Supplier') U.openSupplier(r.id); else U.openSite(r.id); });
@@ -393,7 +393,7 @@ window.SCR = window.SCR || {};
     grid.appendChild(dataCard);
     const rows2 = D.nodeExposureFor(prod.id).sort((a, b) => b.avar - a.avar);
     const nd = U.table([
-      { h: 'Node', cell: r => `<span class="cell-main" style="font-size:12.5px">${U.esc(r.name)}</span>` },
+      { h: 'Node', cell: r => `<span class="cell-main" style="font-size:14px">${U.esc(r.name)}</span>` },
       { h: 'Type', cell: r => r.type },
       { h: 'TTR', cls: 'num', cell: r => {
         const ref = r.type === 'Supplier' ? D.supplierById(r.id) : (D.plantById(r.id) || D.dcById(r.id));
@@ -444,8 +444,10 @@ window.SCR = window.SCR || {};
       <button class="btn btn-primary" id="noAct">Create mitigation action</button>
     </div>`);
     grid.appendChild(act);
-    act.querySelector('#noSim').addEventListener('click', () =>
-      SCR.navigate('scenario', { node: rows2[0].type === 'Supplier' ? rows2[0].id : rows2[0].id }));
+    act.querySelector('#noSim').addEventListener('click', () => {
+      if (!rows2.length) return;
+      U.openScenario(rows2[0].id, { why: 'Failing ' + rows2[0].name + ', the top node behind ' + prod.name, days: 30 });
+    });
     act.querySelector('#noAct').addEventListener('click', () => U.createAction(prod.name));
   }
 

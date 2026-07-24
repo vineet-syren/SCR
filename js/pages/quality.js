@@ -108,7 +108,7 @@ window.SCR = window.SCR || {};
         }),
         legend: Object.assign(SCR.theme.baseOption().legend, { top: 0 }),
         grid: { left: 8, right: 14, top: 32, bottom: 4, containLabel: true },
-        xAxis: SCR.theme.catAxis(rows.map(r => r.sector), { axisLabel: { color: t.ink3, fontSize: 11.5, interval: 0, width: 110, overflow: 'break' } }),
+        xAxis: SCR.theme.catAxis(rows.map(r => r.sector), { axisLabel: { color: t.ink3, fontSize: 12.5, interval: 0, width: 110, overflow: 'break' } }),
         yAxis: SCR.theme.valAxis({ min: 0, max: 100, axisLabel: { formatter: v => v + '%' } }),
         series: [
           { name: 'TTR', type: 'bar', data: rows.map(r => r.ttr), barMaxWidth: 18, itemStyle: { color: t.series[0], borderRadius: [3, 3, 0, 0] } },

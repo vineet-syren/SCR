@@ -73,7 +73,7 @@ window.SCR = window.SCR || {};
         <li>Mitigation executed YTD has removed <strong>${F.usdM(D.kpis.mitigatedYtd)}</strong> of AVAR;
           enterprise RI recovered <strong>${F.signed(D.kpis.riDelta, ' pts')}</strong> this month.</li>
       </ul>
-      <p class="muted" style="font-size:12.5px">Composed by the Impact &amp; VAR Agent from the current filter scope.</p>`);
+      <p class="muted" style="font-size:14px">Composed by the Impact &amp; VAR Agent from the current filter scope.</p>`);
   }
 
   function openExecBrief() {
@@ -82,9 +82,9 @@ window.SCR = window.SCR || {};
     const topAlerts = D.alerts.filter(a => a.status !== 'closed' && a.sev === 'critical');
     const pending = D.recommendations.filter(r => r.status === 'pending')
       .slice().sort((a, b) => b.exposure - a.exposure);
-    const h4 = 'font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:15px 0 6px';
+    const h4 = 'font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:15px 0 6px';
     SCR.ui.modal('Executive resilience brief — 10 Jul 2026', `
-      <div style="font-size:13.5px;line-height:1.62;color:var(--ink-2)">
+      <div style="font-size:15px;line-height:1.62;color:var(--ink-2)">
         <p style="margin:0 0 4px">${esc(D.company)} carries <strong style="color:var(--ink)">${F.usdM(D.kpis.totalVAR)} value at risk</strong>
           (${F.usdM(D.kpis.totalAVAR)} probability-adjusted) against ${F.usdM(D.kpis.totalNTS)} of NTS.
           Enterprise RI is <strong>${D.kpis.enterpriseRI}%</strong> (${F.signed(D.kpis.riDelta, ' pts')} vs last month);
@@ -218,8 +218,8 @@ window.SCR = window.SCR || {};
     body.style.overflowY = 'auto';
     const ranked = prods.slice().sort((a, b) => b.avar - a.avar);
     const tbl = U.table([
-      { h: 'Sector', cell: p => `<span style="font-size:12.5px">${U.esc(p.sectorName)}</span>` },
-      { h: 'Value Stream', cell: p => `<span style="font-size:12.5px">${U.esc(p.stream)}</span>` },
+      { h: 'Sector', cell: p => `<span style="font-size:14px">${U.esc(p.sectorName)}</span>` },
+      { h: 'Value Stream', cell: p => `<span style="font-size:14px">${U.esc(p.stream)}</span>` },
       { h: 'Product', cell: p => `<span class="cell-main">${U.esc(p.name)}</span>` },
       { h: 'NTS (MM USD)', cls: 'num', cell: p => F.num(p.nts) },
       { h: 'Total Wtd. AVAR ▾', cls: 'num', cell: p => `<strong>${p.avar.toFixed(1)}</strong>` },
@@ -283,14 +283,14 @@ window.SCR = window.SCR || {};
         grid: { left: 8, right: 52, top: 6, bottom: 4, containLabel: true },
         xAxis: SCR.theme.valAxis({ axisLabel: { formatter: v => F.num(v) } }),
         yAxis: Object.assign(SCR.theme.catAxis(top.map(n => n.name)), {
-          axisLabel: { color: t.ink2, fontSize: 11.5, width: 168, overflow: 'truncate' }
+          axisLabel: { color: t.ink2, fontSize: 12.5, width: 168, overflow: 'truncate' }
         }),
         series: [{
           name: label, type: 'bar',
           data: top.map(n => +n[rankBy].toFixed(1)),
           barMaxWidth: 15,
           itemStyle: { color: t.series[4], borderRadius: [0, 4, 4, 0] },
-          label: { show: true, position: 'right', fontSize: 11, color: t.ink2, formatter: p => F.num(p.value) }
+          label: { show: true, position: 'right', fontSize: 12, color: t.ink2, formatter: p => F.num(p.value) }
         }]
       });
     });
@@ -372,8 +372,8 @@ window.SCR = window.SCR || {};
         title: {
           text: F.usdM(D.kpis.totalAVAR), subtext: 'total AVAR',
           left: 'center', top: '40%',
-          textStyle: { color: t.ink, fontSize: 21, fontWeight: 700 },
-          subtextStyle: { color: t.ink3, fontSize: 12 }
+          textStyle: { color: t.ink, fontSize: 23, fontWeight: 700 },
+          subtextStyle: { color: t.ink3, fontSize: 13 }
         },
         series: [{
           type: 'pie', radius: ['58%', '80%'], center: ['50%', '46%'],
@@ -457,7 +457,7 @@ window.SCR = window.SCR || {};
         }),
         legend: Object.assign(SCR.theme.baseOption().legend, { bottom: 0, left: 'center' }),
         grid: { left: 8, right: 14, top: 14, bottom: 30, containLabel: true },
-        xAxis: SCR.theme.catAxis(D.monthly.months, { axisLabel: { color: SCR.theme.tokens().ink3, fontSize: 11.5, interval: 2 } }),
+        xAxis: SCR.theme.catAxis(D.monthly.months, { axisLabel: { color: SCR.theme.tokens().ink3, fontSize: 12.5, interval: 2 } }),
         yAxis: SCR.theme.valAxis({ axisLabel: { formatter: v => '$' + v + 'M' } }),
         series: mitKeys.map((k, i) => ({
           name: k, type: 'line', stack: 'mit', smooth: false, symbol: 'none',

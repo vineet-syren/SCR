@@ -126,24 +126,24 @@ window.SCR = window.SCR || {};
         }),
         legend: { show: false },
         grid: { left: 8, right: 14, top: 26, bottom: 4, containLabel: true },
-        xAxis: SCR.theme.catAxis(labels, { axisLabel: { color: t.ink3, fontSize: 11.5, interval: 0, width: 92, overflow: 'break' } }),
+        xAxis: SCR.theme.catAxis(labels, { axisLabel: { color: t.ink3, fontSize: 12.5, interval: 0, width: 92, overflow: 'break' } }),
         yAxis: SCR.theme.valAxis({ axisLabel: { formatter: v => fmtV(v) } }),
         series: [
           { name: 'base', type: 'bar', stack: 'wf', itemStyle: { color: 'transparent' }, emphasis: { itemStyle: { color: 'transparent' } }, tooltip: { show: false }, data: base, barMaxWidth: barMax },
           {
             name: 'increase', type: 'bar', stack: 'wf', data: rise, barMaxWidth: barMax,
             itemStyle: { color: upColor, borderRadius: [4, 4, 0, 0] },
-            label: { show: true, position: 'top', fontSize: 11.5, color: t.ink2, formatter: p => p.value === '-' ? '' : '+' + fmtV(p.value) }
+            label: { show: true, position: 'top', fontSize: 12.5, color: t.ink2, formatter: p => p.value === '-' ? '' : '+' + fmtV(p.value) }
           },
           {
             name: 'decrease', type: 'bar', stack: 'wf', data: fall, barMaxWidth: barMax,
             itemStyle: { color: downColor, borderRadius: [4, 4, 0, 0] },
-            label: { show: true, position: 'top', fontSize: 11.5, color: t.ink2, formatter: p => p.value === '-' ? '' : '−' + fmtV(p.value) }
+            label: { show: true, position: 'top', fontSize: 12.5, color: t.ink2, formatter: p => p.value === '-' ? '' : '−' + fmtV(p.value) }
           },
           {
             name: 'total', type: 'bar', stack: 'wf', data: totals, barMaxWidth: barMax,
             itemStyle: { color: t.series[0], borderRadius: [4, 4, 0, 0] },
-            label: { show: true, position: 'top', fontSize: 12, fontWeight: 700, color: t.ink, formatter: p => p.value === '-' ? '' : fmtV(p.value) }
+            label: { show: true, position: 'top', fontSize: 13, fontWeight: 700, color: t.ink, formatter: p => p.value === '-' ? '' : fmtV(p.value) }
           }
         ]
       });
@@ -276,13 +276,13 @@ window.SCR = window.SCR || {};
         xAxis: {
           type: 'time', min, max,
           axisLine: { lineStyle: { color: t.axis } },
-          axisLabel: { color: t.ink3, fontSize: 11.5, formatter: v => new Date(v).toLocaleDateString('en-GB', { month: 'short' }) },
+          axisLabel: { color: t.ink3, fontSize: 12.5, formatter: v => new Date(v).toLocaleDateString('en-GB', { month: 'short' }) },
           splitLine: { lineStyle: { color: t.grid } }
         },
         yAxis: {
           type: 'category', data: cats, inverse: true,
           axisLine: { show: false }, axisTick: { show: false },
-          axisLabel: { color: t.ink2, fontSize: 12.5, width: 230, overflow: 'truncate' }
+          axisLabel: { color: t.ink2, fontSize: 14, width: 230, overflow: 'truncate' }
         },
         series: [{
           type: 'custom',
@@ -302,7 +302,7 @@ window.SCR = window.SCR || {};
           markLine: {
             symbol: 'none',
             lineStyle: { color: t.status.critical, width: 1.5, type: 'dashed' },
-            label: { formatter: 'Today', color: t.status.critical, fontSize: 11, position: 'insideEndTop' },
+            label: { formatter: 'Today', color: t.status.critical, fontSize: 12, position: 'insideEndTop' },
             data: [{ xAxis: today }]
           }
         }]
@@ -352,7 +352,7 @@ window.SCR = window.SCR || {};
           Object.assign(SCR.theme.catAxis(cfg.labels), { gridIndex: 0, axisLabel: { show: false }, axisTick: { show: false } }),
           Object.assign(SCR.theme.catAxis(cfg.labels), {
             gridIndex: 1,
-            axisLabel: { color: t.ink3, fontSize: 10.5, interval: 0, rotate: cfg.rotate == null ? 38 : cfg.rotate, width: 86, overflow: 'truncate' }
+            axisLabel: { color: t.ink3, fontSize: 11.5, interval: 0, rotate: cfg.rotate == null ? 38 : cfg.rotate, width: 86, overflow: 'truncate' }
           })
         ],
         yAxis: [

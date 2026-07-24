@@ -69,11 +69,11 @@ SCR.registerPage = SCR.registerPage || function (key, page) { SCR.pages[key] = p
         borderColor: t.border,
         borderWidth: 1,
         padding: [10, 13],
-        textStyle: { color: t.ink, fontSize: 13 },
+        textStyle: { color: t.ink, fontSize: 14.5 },
         extraCssText: 'box-shadow:0 8px 30px rgba(0,0,0,.18);border-radius:10px;'
       },
       legend: {
-        textStyle: { color: t.ink2, fontSize: 12.5 },
+        textStyle: { color: t.ink2, fontSize: 14 },
         itemWidth: 10, itemHeight: 10, icon: 'roundRect', itemGap: 14
       },
       grid: { left: 8, right: 14, top: 34, bottom: 4, containLabel: true }
@@ -88,7 +88,7 @@ SCR.registerPage = SCR.registerPage || function (key, page) { SCR.pages[key] = p
       data,
       axisLine: { lineStyle: { color: t.axis } },
       axisTick: { show: false },
-      axisLabel: { color: t.ink3, fontSize: 12 }
+      axisLabel: { color: t.ink3, fontSize: 13 }
     }, extra || {});
   }
 
@@ -99,7 +99,7 @@ SCR.registerPage = SCR.registerPage || function (key, page) { SCR.pages[key] = p
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: t.ink3, fontSize: 12 },
+      axisLabel: { color: t.ink3, fontSize: 13 },
       splitLine: { lineStyle: { color: t.grid, width: 1 } }
     }, extra || {});
   }

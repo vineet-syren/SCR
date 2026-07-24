@@ -203,7 +203,7 @@ window.SCR = window.SCR || {};
           left: 0, right: 148, top: 8, bottom: 8,
           sort: 'descending', gap: 3,
           minSize: '12%',
-          label: { color: t.ink, fontSize: 12, formatter: p => `${p.name}  ·  ${F.num(p.value)}` },
+          label: { color: t.ink, fontSize: 13, formatter: p => `${p.name}  ·  ${F.num(p.value)}` },
           labelLine: { lineStyle: { color: t.axis } },
           itemStyle: { borderColor: t.surface, borderWidth: 2, borderRadius: 4 },
           data: D.funnel.map((f, i) => ({
@@ -230,11 +230,11 @@ window.SCR = window.SCR || {};
         <div class="fact"><div class="f-label">Approved, in execution</div><div class="f-value">${F.num(fn[fn.length - 2].value - fn[fn.length - 1].value)}</div></div>
         <div class="fact"><div class="f-label">AVAR mitigated YTD</div><div class="f-value">${F.usdM(D.kpis.mitigatedYtd)}</div></div>
       </div>
-      <div style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:16px 0 4px">Stage conversion</div>
+      <div style="font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:16px 0 4px">Stage conversion</div>
       ${stageConv.map(c => `<div class="flex aic gap12" style="margin:8px 0">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(c.label)}</div>
-          <div style="font-size:11px;color:var(--ink-3)">${c.counts}</div>
+          <div style="font-size:14px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U.esc(c.label)}</div>
+          <div style="font-size:12px;color:var(--ink-3)">${c.counts}</div>
         </div>
         <span class="meter" style="width:150px">
           <span class="meter-track"><span class="meter-fill" style="width:${c.pct}%;background:var(--accent)"></span></span>
@@ -242,7 +242,7 @@ window.SCR = window.SCR || {};
         </span>
       </div>`).join('')}
       <div class="flex aic gap8" style="margin-top:14px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
-        <div style="flex:1;font-size:12.5px;color:var(--ink-2)"><strong style="color:var(--ink)">${pending.length} proposals awaiting approval</strong> — protects ${F.usdM(pendingExposure)} if executed</div>
+        <div style="flex:1;font-size:14px;color:var(--ink-2)"><strong style="color:var(--ink)">${pending.length} proposals awaiting approval</strong> — protects ${F.usdM(pendingExposure)} if executed</div>
         <button class="btn btn-sm btn-primary">Review</button>
       </div>
     </div>`);
