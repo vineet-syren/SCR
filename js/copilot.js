@@ -101,22 +101,182 @@ window.SCR = window.SCR || {};
     return D().plants.find(p => q.includes(p.name.split(',')[0].toLowerCase())) || null;
   }
 
+  /* ---------------- Business KPI registry ----------------
+     Every headline number the product displays is answerable here, both as a
+     value ("what is NTS in scope") and as a definition ("how is AVAR
+     calculated"). `aliases` are matched longest-first so "value at risk" wins
+     over the bare "var" inside it. */
+  function KPIS() {
+    const d = D(), k = d.kpis, F = SCR.fmt;
+    return [
+      {
+        key: 'nts', label: 'NTS in scope', value: () => F.usdM(k.totalNTS),
+        aliases: ['nts in scope', 'net trade sales', 'net sales', 'nts', 'turnover', 'top line', 'revenue in scope'],
+        what: 'Net trade sales — the revenue carried by every product currently inside your filter scope. It is the denominator for everything else: exposure only means something relative to the sales it threatens.',
+        how: 'Summed product NTS across the products in scope.',
+        go: { label: 'Open Value Streams', run: () => SCR.navigate('valuestream') }
+      },
+      {
+        key: 'var', label: 'Value at risk (VAR)', value: () => F.usdM(k.totalVAR),
+        aliases: ['value at risk', 'gross exposure', 'var'],
+        what: 'The sales that would be lost if a dependency failed and could not be recovered before cover ran out. It is the gross, worst-case number — before any judgement about how likely the event is.',
+        how: 'For each node: dependent NTS × uncovered days ÷ 365, where uncovered days = TTR − TTS. If recovery lands inside cover, VAR is zero.',
+        go: { label: 'Open Executive Summary', run: () => SCR.navigate('executive') }
+      },
+      {
+        key: 'avar', label: 'Weighted AVAR', value: () => F.usdM(k.totalAVAR),
+        aliases: ['weighted avar', 'wtd avar', 'wtd. avar', 'wavar', 'adjusted value at risk', 'probability adjusted', 'avar'],
+        what: 'Value at risk after weighting for how likely the disruption actually is. This is the number to prioritise and fund against, because it reflects expected loss rather than worst case.',
+        how: 'VAR × a severity-scaled probability per node. It is always lower than VAR — the gap between them is the part of the risk that is improbable rather than absent.',
+        go: { label: 'Open Executive Summary', run: () => SCR.navigate('executive') }
+      },
+      {
+        key: 'ri', label: 'Enterprise resilience index', value: () => k.enterpriseRI + '%',
+        aliases: ['enterprise resilience index', 'resilience index', 'enterprise ri', 'resilience score', 'ri'],
+        what: 'A composite 0–100 score where higher is stronger. It blends how much exposure is covered, how fast the network recovers, and how concentrated the dependencies are.',
+        how: 'Weighted composite of cover ratio, TTR/TTS headroom and single-source concentration, normalised to 0–100.',
+        go: { label: 'Open Executive Summary', run: () => SCR.navigate('executive') }
+      },
+      {
+        key: 'gap', label: 'TTR > TTS components', value: () => String(k.gapMaterials),
+        aliases: ['ttr > tts', 'ttr>tts', 'uncovered components', 'recovery gap', 'gap components', 'uncovered days'],
+        what: 'Components that take longer to recover than they can survive on hand. These are the only components that can actually convert a disruption into lost sales — everything else is absorbed by cover.',
+        how: 'Count of components where TTR exceeds TTS. ' + k.gapProducts + ' products are exposed through them.',
+        go: { label: 'Open Value Streams', run: () => SCR.navigate('valuestream') }
+      },
+      {
+        key: 'mitigated', label: 'AVAR mitigated YTD', value: () => F.usdM(k.mitigatedYtd),
+        aliases: ['avar mitigated', 'mitigated ytd', 'risk removed', 'risk retired', 'mitigated'],
+        what: 'Adjusted value at risk removed by mitigations that have actually landed this year — not planned, delivered.',
+        how: 'Sum of realised AVAR reduction across executed actions. It is the same figure as the "Mitigated" step in the AVAR bridge.',
+        go: { label: 'Open Alerts & Actions', run: () => SCR.navigate('actions') }
+      },
+      {
+        key: 'detection', label: 'Mean detection lead', value: () => k.detectionLeadDays + ' days',
+        aliases: ['mean detection lead', 'detection lead', 'detection time', 'signal to alert', 'lead time'],
+        what: 'Average time between a signal arriving and an alert being raised. Detection lead is time you get to spend on mitigation instead of firefighting.',
+        how: 'Mean elapsed time from sensed signal to raised alert across the funnel.',
+        go: { label: 'Open Alerts & Actions', run: () => SCR.navigate('actions') }
+      },
+      {
+        key: 'single', label: 'Single-source materials', value: () => k.singleSourceCount + ' (' + k.singleSourceRisky + ' risky)',
+        aliases: ['single source materials', 'single-source', 'sole source', 'sole sourced'],
+        what: 'Materials with exactly one qualified supplier. If that supplier stops, the material stops — there is no second source to switch to.',
+        how: 'Count of materials with one qualified supplier; "risky" additionally have TTR > TTS.',
+        go: { label: 'Open Category & Suppliers', run: () => SCR.navigate('category') }
+      },
+      {
+        key: 'alerts', label: 'Open alerts', value: () => k.openAlerts + ' (' + k.criticalAlerts + ' critical)',
+        aliases: ['open alerts', 'critical alerts', 'alerts'],
+        what: 'Unresolved exceptions raised by the sensing layer, each routed to a named owner.',
+        how: 'Alerts not yet closed; critical means a node is already failing or will inside its TTS.',
+        go: { label: 'Open Alerts & Actions', run: () => SCR.navigate('actions') }
+      },
+      {
+        key: 'actions', label: 'Actions in flight', value: () => k.openActions + ' (' + k.overdueActions + ' overdue)',
+        aliases: ['actions in flight', 'open actions', 'overdue actions', 'actions'],
+        what: 'Mitigations currently being executed, each tracked with residual risk before and after.',
+        how: 'Actions not yet completed; overdue means past their due date.',
+        go: { label: 'Open Alerts & Actions', run: () => SCR.navigate('actions') }
+      },
+      {
+        key: 'nodes', label: 'Nodes monitored', value: () => k.nodes + ' (' + k.supplierNodes + ' suppliers, ' + k.siteNodes + ' plants & DCs)',
+        aliases: ['nodes monitored', 'how many nodes', 'nodes', 'high risk nodes'],
+        what: 'Every supplier, plant and distribution centre in the digital twin. ' + k.highRiskNodes + ' currently sit below an RI of 60.',
+        how: 'Suppliers + plants + DCs across the modelled network.',
+        go: { label: 'Open Network Explorer', run: () => SCR.navigate('network') }
+      },
+      {
+        key: 'scope', label: 'Scope', value: () => k.products + ' products across ' + k.countries + ' markets',
+        aliases: ['how many products', 'products in scope', 'markets', 'countries', 'products'],
+        what: 'The products and markets currently modelled.',
+        how: 'Counted from the product and market master.',
+        go: { label: 'Open Value Streams', run: () => SCR.navigate('valuestream') }
+      },
+      {
+        key: 'tts', label: 'TTS — time to survive', concept: true, value: () => 'measured per component',
+        aliases: ['time to survive', 'tts'],
+        what: 'How long production can keep running on the inventory and cover already in hand, with no resupply.',
+        how: 'Days of cover from on-hand and in-transit stock at planned consumption.',
+        go: { label: 'Open Site Resilience', run: () => SCR.navigate('site') }
+      },
+      {
+        key: 'ttr', label: 'TTR — time to recover', concept: true, value: () => 'measured per node',
+        aliases: ['time to recover', 'ttr'],
+        what: 'How long it takes to restore supply after a node fails — including qualifying or switching to an alternate.',
+        how: 'Assessed recovery time per node, from the supplier and site master.',
+        go: { label: 'Open Network Explorer', run: () => SCR.navigate('network') }
+      },
+      {
+        key: 'rre', label: 'RRE — residual risk exposure', concept: true, value: () => 'scored 0–1 per node',
+        aliases: ['residual risk exposure', 'residual risk', 'rre'],
+        what: 'How much risk remains after the mitigations already in place. A high RRE beside a high VAR is the combination that matters: real money exposed, and the current plan is not holding it.',
+        how: 'Normalised 0–1 from the driver scores, net of mitigations in place.',
+        go: { label: 'Open Category & Suppliers', run: () => SCR.navigate('category') }
+      }
+    ];
+  }
+
+  function matchKpi(q) {
+    let best = null, bestLen = 0;
+    KPIS().forEach(def => def.aliases.forEach(a => {
+      // whole-token match so "var" doesn't fire inside "variance"
+      const re = new RegExp('(^|[^a-z0-9])' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)');
+      if (re.test(q) && a.length > bestLen) { best = def; bestLen = a.length; }
+    }));
+    return best;
+  }
+
+  const isDefinitional = q =>
+    /(what|whats|what's|which)\s+(is|are|does|do)\b|^what'?s\b|\bdefine\b|\bdefinition\b|\bmeaning\b|\bmeans?\b|\bexplain\b|how (is|are|do you|does).*(calculat|comput|derive|work|measur)|\bhow do you get\b/.test(q);
+
+  function kpiAnswer(def, definitional) {
+    return {
+      tag: AGENTS.impact,
+      html: `<p><strong>${esc(def.label)}</strong> — ${def.concept ? esc(def.value()) : `currently <strong>${def.value()}</strong>`}.</p>
+        <p>${def.what}</p>
+        <p style="opacity:.75"><strong>How it is derived:</strong> ${def.how}</p>`,
+      actions: [{ label: def.go.label, go: def.go.run }]
+    };
+  }
+
+  function kpiBoard() {
+    const rows = KPIS().filter(d => !['tts', 'ttr', 'rre'].includes(d.key))
+      .map(d => `<tr><td>${esc(d.label)}</td><td><strong>${d.value()}</strong></td></tr>`).join('');
+    return {
+      tag: AGENTS.impact,
+      html: `<p>Every headline number I track, on the current scope:</p>
+        <table><thead><tr><th>KPI</th><th>Now</th></tr></thead><tbody>${rows}</tbody></table>
+        <p>Ask about any one of them by name for what it means and how it is derived.</p>`,
+      actions: [{ label: 'Executive Summary', go: () => SCR.navigate('executive') }]
+    };
+  }
+
   /* ---------------- Intent router ---------------- */
   function route(text) {
     const q = text.toLowerCase();
     const sup = findSupplier(q);
     const site = findSite(q);
+    const kpi = matchKpi(q);
+    // "what is NTS" / "how is AVAR calculated" — definition beats value
+    if (kpi && isDefinitional(q)) return kpiAnswer(kpi, true);
+    if (/\b(kpis?|metrics?|scorecard|all the numbers|headline numbers)\b/.test(q)) return kpiBoard();
     if (/why .*(critical|high|risky)|explain/.test(q) && sup) return whySupplier(sup);
     if (/top .*(node|supplier|risk)/.test(q)) return topNodes();
-    if (/ttr\s*>\s*tts|recover|gap|survive/.test(q)) return gapAnswer();
+    // "which products have TTR > TTS" wants the list, not the metric definition
+    if (/ttr\s*>\s*tts|recover|gap|survive/.test(q) &&
+        (!kpi || /\b(which|list|show|name)\b/.test(q))) return gapAnswer();
     if (/single[- ]source|sole[- ]source/.test(q) && /plan|mitigat/.test(q)) return mitigationPlan();
     if (/single[- ]source|sole[- ]source/.test(q)) return singleSource();
-    if (/value at risk|avar|var|exposure/.test(q)) return biggestVar();
+    if (/(biggest|largest|highest|worst|most|right now)/.test(q) && /(risk|exposure|var|avar)/.test(q)) return biggestVar();
     if (/what if|simulate|outage|fails/.test(q)) return whatIf(sup, site);
     if (/brief|digest|summary|summarize/.test(q)) return dailyBrief();
+    // a bare metric question ("NTS in scope", "wtd avar", "enterprise RI")
+    if (kpi) return kpiAnswer(kpi, false);
     if (site) return siteStatus(site);
     if (sup) return whySupplier(sup);
     if (/plan|mitigat/.test(q)) return mitigationPlan();
+    if (/value at risk|avar|var|exposure/.test(q)) return biggestVar();
     return fallback();
   }
 
@@ -307,7 +467,10 @@ window.SCR = window.SCR || {};
       tag: AGENTS.copilot,
       html: `<p>I didn't catch that — here's what I'm good at:</p>
         <ul>${SUGGESTS.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
-        <p>Ask in your own words, name any supplier or site, or tap a suggestion below.</p>`
+        <p>I can also explain or quote any KPI on the dashboards — NTS in scope, value at risk,
+        weighted AVAR, enterprise RI, TTR&nbsp;&gt;&nbsp;TTS components, AVAR mitigated YTD,
+        detection lead and more. Try <em>“what is AVAR”</em> or <em>“show me all KPIs”</em>.</p>
+        <p>Ask in your own words, or name any supplier or site.</p>`
     };
   }
 
@@ -374,5 +537,7 @@ window.SCR = window.SCR || {};
     welcome();
   }
 
-  SCR.copilot = { init, open, close, setSuggests, personaChanged, reset };
+  // `route` is exported for diagnostics: it lets the intent layer be exercised
+  // without the typing delay or the DOM.
+  SCR.copilot = { init, open, close, setSuggests, personaChanged, reset, route };
 })();

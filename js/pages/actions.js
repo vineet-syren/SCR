@@ -18,13 +18,50 @@ window.SCR = window.SCR || {};
 
     /* ===== KPI strip ===== */
     const open = D.alerts.filter(a => a.status !== 'closed');
-    const go = id => () => U.scrollToCard(document.getElementById(id));
+    const openExposure = +open.reduce((a, x) => a + x.exposure, 0).toFixed(1);
+    // Assigned once the inbox exists; a KPI click can then re-filter it, not
+    // merely scroll past it.
+    let setSev = () => {};
+    /* Every tile lands on the card that answers it and says why it landed there. */
+    const goTo = (id, title, body) => () => {
+      U.scrollToCard(document.getElementById(id));
+      U.toast(title, body, '');
+    };
+    const goSev = (sev, title, body) => () => {
+      setSev(sev);
+      U.scrollToCard(document.getElementById('actInbox'));
+      U.toast(title, body, '');
+    };
     host.appendChild(U.kpiStrip([
-      { icon: 'risk', color: 5, label: 'Open alerts', value: open.length, sub: D.kpis.criticalAlerts + ' critical', subClass: 'bad', onClick: go('actInbox') },
-      { icon: 'dollar', color: 3, label: 'Exposure across open alerts', value: F.usdM(+open.reduce((a, x) => a + x.exposure, 0).toFixed(1)), sub: 'VAR linked', onClick: go('actInbox') },
-      { icon: 'gap', color: 1, label: 'Actions in flight', value: D.kpis.openActions, sub: D.kpis.overdueActions + ' overdue', subClass: D.kpis.overdueActions ? 'bad' : 'good', onClick: go('actTrack') },
-      { icon: 'gauge', color: 2, label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), sub: '66 actions executed', subClass: 'good', onClick: go('actGantt') },
-      { icon: 'globe', color: 0, label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert', onClick: go('actFunnel') }
+      {
+        icon: 'risk', color: 5, label: 'Open alerts', value: open.length,
+        sub: D.kpis.criticalAlerts + ' critical', subClass: 'bad',
+        onClick: goSev('all', 'All open alerts', `Inbox filtered to <strong>All</strong> — ${open.length} unresolved exceptions, most severe and highest exposure first.`),
+        subOnClick: () => goSev('critical', 'Critical alerts only',
+          `Inbox filtered to <strong>Critical</strong> — ${D.kpis.criticalAlerts} alerts where a node is already failing or will inside its TTS.`)(),
+        subTitle: 'Filter the inbox to critical alerts only'
+      },
+      {
+        icon: 'dollar', color: 3, label: 'Exposure across open alerts', value: F.usdM(openExposure), sub: 'VAR linked',
+        onClick: goTo('actInbox', 'Exposure across open alerts',
+          `${F.usdM(openExposure)} is the summed VAR of the nodes named in the ${open.length} open alerts — the sales at risk if none are actioned.`)
+      },
+      {
+        icon: 'gap', color: 1, label: 'Actions in flight', value: D.kpis.openActions,
+        sub: D.kpis.overdueActions + ' overdue', subClass: D.kpis.overdueActions ? 'bad' : 'good',
+        onClick: goTo('actTrack', 'Action tracker', `${D.kpis.openActions} mitigations are in flight, each showing residual risk before and after it lands.`),
+        subOnClick: () => goTo('actTrack', 'Overdue actions',
+          `${D.kpis.overdueActions} action${D.kpis.overdueActions === 1 ? ' is' : 's are'} past due — shown in red in the Due column below.`)(),
+        subTitle: 'Jump to the tracker and highlight overdue work'
+      },
+      {
+        icon: 'gauge', color: 2, label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), sub: '66 actions executed', subClass: 'good',
+        onClick: goTo('actGantt', 'AVAR mitigated YTD', `${F.usdM(D.kpis.mitigatedYtd)} of adjusted value at risk retired so far this year — the programs below are what delivered it.`)
+      },
+      {
+        icon: 'globe', color: 0, label: 'Mean detection lead', value: D.kpis.detectionLeadDays + 'd', sub: 'signal → alert',
+        onClick: goTo('actFunnel', 'Detection lead time', `${D.kpis.detectionLeadDays} days is the average gap between a signal arriving and an alert being raised — the funnel below shows where signals drop out.`)
+      }
     ]));
 
     const grid = U.el('<div class="grid grid-12"></div>');
@@ -39,7 +76,32 @@ window.SCR = window.SCR || {};
     </div>`);
     const inboxCard = U.card({
       title: 'Alert inbox', sub: 'persona-routed exceptions · acknowledge, assign or snooze',
-      cols: 7, actions: [segSev]
+      cols: 7, actions: [segSev],
+      insight: () => {
+        const openA = D.alerts.filter(a => a.status !== 'closed');
+        const crit = openA.filter(a => a.sev === 'critical');
+        const byType = {};
+        openA.forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
+        const domType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+        const top = openA.slice().sort((a, b) => b.exposure - a.exposure)[0];
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Open', value: openA.length },
+            { label: 'Critical', value: crit.length, tone: crit.length ? 'bad' : 'good' },
+            { label: 'Exposure', value: F.usdM(+openA.reduce((a, x) => a + x.exposure, 0).toFixed(1)), tone: 'bad' }
+          ],
+          points: [
+            `${openA.length} exceptions are unresolved and routed to owners by persona, so each one already has someone accountable rather than sitting in a shared queue.`,
+            domType ? `Most common driver right now is <strong>${U.esc(domType[0])}</strong> (${domType[1]} alert${domType[1] === 1 ? '' : 's'}) — a cluster in one type usually means a systemic cause rather than bad luck.` : '',
+            top ? `Highest exposure is <strong>${U.esc(top.title)}</strong> at ${F.usdM(top.exposure)}, owned by ${U.esc(top.owner)}.` : ''
+          ].filter(Boolean),
+          actions: [
+            { label: 'Show critical only', onClick: () => setSev('critical') },
+            top ? { label: 'Open ' + top.id, onClick: () => U.openAlert(top.id) } : null
+          ].filter(Boolean)
+        };
+      }
     });
     inboxCard.id = 'actInbox';
     grid.appendChild(inboxCard);
@@ -81,16 +143,41 @@ window.SCR = window.SCR || {};
       if (!rows.length) inboxBody.innerHTML = '<div class="empty">No alerts in this bucket.</div>';
     }
     renderInbox();
-    segSev.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-      state.sevFilter = b.dataset.s;
-      segSev.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    segSev.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSev(b.dataset.s)));
+    // Now that the inbox exists, the KPI tiles above can drive its filter.
+    setSev = sev => {
+      state.sevFilter = sev;
+      segSev.querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.s === sev));
       renderInbox();
-    }));
+    };
 
     /* ===== Funnel ===== */
     const funnelCard = U.card({
       title: 'Mitigation pipeline', sub: 'FY26 YTD — from sensed signal to executed action',
-      cols: 5, chartClass: 'chart-lg'
+      cols: 5, chartClass: 'chart-lg',
+      insight: () => {
+        const f = D.funnel || [];
+        const first = f[0], last = f[f.length - 1];
+        let worstDrop = null;
+        for (let i = 1; i < f.length; i++) {
+          const d = f[i - 1].value - f[i].value;
+          if (!worstDrop || d > worstDrop.d) worstDrop = { d, from: f[i - 1], to: f[i] };
+        }
+        return {
+          agent: 'Execution & Workflow Agent',
+          reads: [
+            { label: 'Signals sensed', value: first ? first.value : '—' },
+            { label: 'Actions executed', value: last ? last.value : '—', tone: 'good' },
+            { label: 'Conversion', value: first && last ? ((last.value / first.value) * 100).toFixed(0) + '%' : '—' }
+          ],
+          points: [
+            first && last ? `${first.value} signals were sensed year to date and ${last.value} became executed actions — a ${((last.value / first.value) * 100).toFixed(0)}% conversion.` : 'No funnel data.',
+            worstDrop ? `The biggest fall-off is <strong>${U.esc(worstDrop.from.stage)} → ${U.esc(worstDrop.to.stage)}</strong>, losing ${worstDrop.d}. That stage is where the pipeline actually leaks.` : '',
+            'Narrowing is expected and healthy — not every signal deserves an action. What matters is whether the drop happens at triage or at execution.'
+          ].filter(Boolean),
+          actions: [{ label: 'Open the tracker', onClick: () => U.scrollToCard(document.getElementById('actTrack')) }]
+        };
+      }
     });
     funnelCard.id = 'actFunnel';
     grid.appendChild(funnelCard);
@@ -167,7 +254,21 @@ window.SCR = window.SCR || {};
     grid.appendChild(U.el('<div class="section-title col-12">Resilience programs</div>'));
     const ganttCard = U.card({
       title: 'Program timeline', sub: 'assessment → design → build → testing → rollout · dashed line = today',
-      cols: 12, chartClass: 'chart-md'
+      cols: 12, chartClass: 'chart-md',
+      insight: () => ({
+        agent: 'Execution & Workflow Agent',
+        reads: [
+          { label: 'Programs', value: (D.gantt || []).length },
+          { label: 'AVAR mitigated YTD', value: F.usdM(D.kpis.mitigatedYtd), tone: 'good' },
+          { label: 'Actions in flight', value: D.kpis.openActions }
+        ],
+        points: [
+          'Each bar is a resilience program with its phase breakdown; the dashed line is today, so anything to its left that is not complete is genuinely behind rather than merely planned.',
+          `These programs are what delivered the ${F.usdM(D.kpis.mitigatedYtd)} reduction shown as the bridge\u2019s mitigated step on the Executive Summary.`,
+          'Programs overlapping the same phase window compete for the same qualification and testing capacity — a practical constraint the bridge does not show.'
+        ],
+        actions: [{ label: 'See the AVAR bridge', onClick: () => SCR.navigate('executive') }]
+      })
     });
     ganttCard.id = 'actGantt';
     grid.appendChild(ganttCard);
@@ -176,7 +277,26 @@ window.SCR = window.SCR || {};
     /* ===== Action tracker ===== */
     const trackCard = U.card({
       title: 'Mitigation action tracker', sub: 'owner, due date, expected AVAR reduction and residual risk before/after',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const acts = D.actions || [];
+        const overdue = acts.filter(a => a.status === 'Overdue');
+        const byBenefit = acts.slice().sort((a, b) => (b.riskCut || 0) - (a.riskCut || 0));
+        return {
+          agent: 'Execution & Workflow Agent',
+          reads: [
+            { label: 'Actions tracked', value: acts.length },
+            { label: 'Overdue', value: overdue.length, tone: overdue.length ? 'bad' : 'good' },
+            { label: 'AVAR they remove', value: F.usdM(+acts.reduce((a, x) => a + (x.riskCut || 0), 0).toFixed(1)), tone: 'good' }
+          ],
+          points: [
+            `${acts.length} actions are tracked with residual risk before and after, so each one can be judged on risk removed rather than on activity.`,
+            overdue.length ? `${overdue.length} ${overdue.length === 1 ? 'is' : 'are'} past due: ${overdue.slice(0, 3).map(a => U.esc(a.id)).join(', ')} — shown in red in the Due column.` : 'Nothing is currently overdue.',
+            byBenefit.length ? `Largest single reduction on the books is <strong>${U.esc(byBenefit[0].title || byBenefit[0].id)}</strong> at ${F.usdM(byBenefit[0].riskCut || 0)}.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Open Recommendations', onClick: () => SCR.navigate('agents') }]
+        };
+      }
     });
     trackCard.id = 'actTrack';
     grid.appendChild(trackCard);

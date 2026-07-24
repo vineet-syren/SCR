@@ -39,7 +39,25 @@ window.SCR = window.SCR || {};
     /* ===== Completeness by domain ===== */
     const domCard = U.card({
       title: 'Completeness by data domain', sub: 'share of required fields populated after the week-28 refresh',
-      cols: 6
+      cols: 6,
+      insight: () => {
+        const d = (D.dataQuality && D.dataQuality.domains) || [];
+        const r = d.slice().sort((a, b) => a.pct - b.pct);
+        return {
+          agent: 'Resilience Copilot',
+          reads: [
+            { label: 'Domains tracked', value: d.length },
+            { label: 'Weakest', value: r.length ? r[0].name : '—' },
+            { label: 'Its completeness', value: r.length ? r[0].pct + '%' : '—', tone: r.length && r[0].pct < 85 ? 'bad' : 'good' }
+          ],
+          points: [
+            r.length ? `<strong>${U.esc(r[0].name)}</strong> is the least complete domain at ${r[0].pct}% of required fields populated.` : 'No domains tracked.',
+            'Completeness caps confidence: a resilience index computed on partial TTR or inventory data is precise-looking but under-evidenced.',
+            r.length > 1 ? `Best covered is ${U.esc(r[r.length - 1].name)} at ${r[r.length - 1].pct}%.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Open the worklist', onClick: () => U.scrollToCard(document.getElementById('dqWorklist')) }]
+        };
+      }
     });
     domCard.id = 'dqDomains';
     grid.appendChild(domCard);
@@ -58,7 +76,21 @@ window.SCR = window.SCR || {};
     /* ===== Completeness by sector ===== */
     const secCard = U.card({
       title: 'TTR / TTS / RRE coverage by sector', sub: '% of components with populated resilience inputs',
-      cols: 6, chartClass: 'chart-md'
+      cols: 6, chartClass: 'chart-md',
+      insight: () => ({
+        agent: 'TTS Watch Agent',
+        reads: [
+          { label: 'Sectors', value: D.sectors.length },
+          { label: 'Components missing TTR', value: (D.dataQuality && D.dataQuality.missingTTR) != null ? D.dataQuality.missingTTR : '—', tone: 'bad' },
+          { label: 'TTR > TTS found', value: D.kpis.gapMaterials, tone: 'bad' }
+        ],
+        points: [
+          'TTR, TTS and RRE are the three inputs every downstream number depends on — VAR, AVAR and the resilience index are all derived from them.',
+          'A sector with low coverage here is not necessarily low risk; it is unmeasured risk, which is the more dangerous of the two.',
+          `${D.kpis.gapMaterials} components are currently known to recover slower than they survive — that count can only grow as coverage improves.`
+        ],
+        actions: [{ label: 'Open Value Streams', onClick: () => SCR.navigate('valuestream') }]
+      })
     });
     secCard.id = 'dqSector';
     grid.appendChild(secCard);
@@ -89,7 +121,27 @@ window.SCR = window.SCR || {};
     /* ===== Worklist ===== */
     const wlCard = U.card({
       title: 'Missing-data worklist', sub: 'gaps assigned to data owners · auto-generated from the weekly refresh',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const w = (D.dataQuality && D.dataQuality.worklist) || [];
+        const byOwner = {};
+        w.forEach(x => { byOwner[x.owner] = (byOwner[x.owner] || 0) + 1; });
+        const busiest = Object.entries(byOwner).sort((a, b) => b[1] - a[1])[0];
+        return {
+          agent: 'Execution & Workflow Agent',
+          reads: [
+            { label: 'Open gaps', value: w.length, tone: w.length ? 'bad' : 'good' },
+            { label: 'Owners involved', value: Object.keys(byOwner).length },
+            { label: 'Largest queue', value: busiest ? busiest[1] : '—' }
+          ],
+          points: [
+            `${w.length} data gaps are assigned rather than merely reported, so each one has an owner and a due path.`,
+            busiest ? `<strong>${U.esc(busiest[0])}</strong> holds the largest queue at ${busiest[1]} item${busiest[1] === 1 ? '' : 's'}.` : '',
+            'Closing these is what moves the coverage chart above, which in turn tightens every resilience figure in the product.'
+          ].filter(Boolean),
+          actions: [{ label: 'See coverage by sector', onClick: () => U.scrollToCard(document.getElementById('dqSector')) }]
+        };
+      }
     });
     wlCard.id = 'dqWorklist';
     grid.appendChild(wlCard);
@@ -109,7 +161,21 @@ window.SCR = window.SCR || {};
     /* ===== Refresh log ===== */
     const logCard = U.card({
       title: 'Refresh & pipeline log', sub: 'weekly full refresh by default · daily external feeds',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => ({
+        agent: 'Resilience Copilot',
+        reads: [
+          { label: 'Full refresh', value: 'Weekly' },
+          { label: 'External feeds', value: 'Daily' },
+          { label: 'Domains', value: ((D.dataQuality && D.dataQuality.domains) || []).length }
+        ],
+        points: [
+          'Resilience inputs recompute weekly; external risk feeds land daily. That cadence is why an alert can be newer than the index it sits beside.',
+          'Every figure in the product carries the timestamp of its slowest input, so a weekly-refreshed TTR bounds how fresh a derived AVAR can be.',
+          'Use this log to check whether a surprising number reflects reality or simply a feed that has not landed yet.'
+        ],
+        actions: [{ label: 'Back to Executive Summary', onClick: () => SCR.navigate('executive') }]
+      })
     });
     grid.appendChild(logCard);
     logCard.querySelector('.card-body').appendChild(U.table([

@@ -121,7 +121,7 @@ window.SCR = window.SCR || {};
     host.appendChild(grid);
 
     /* ===== Controls ===== */
-    const ctrl = U.card({ title: 'Design the disruption', sub: 'the twin recomputes as you move the sliders', cols: 4 });
+    const ctrl = U.card({ title: 'Design the disruption', sub: 'the twin recomputes as you move the sliders', cols: 4, noInsight: true });
     grid.appendChild(ctrl);
     ctrl.querySelector('.card-body').innerHTML = `
       <div class="sim-panel">
@@ -173,7 +173,25 @@ window.SCR = window.SCR || {};
 
     const wfCard = U.card({
       title: 'Scenario impact bridge', sub: 'exposed sales window → inventory cover → mitigation → residual at risk ($M)',
-      chartClass: 'chart-md'
+      chartClass: 'chart-md',
+      insight: () => {
+        const r = compute();
+        const coverPct = r.exposed ? (r.covered / r.exposed) * 100 : 0;
+        return {
+          agent: 'Scenario Twin Agent',
+          reads: [
+            { label: 'Sales exposed', value: F.usdM(r.exposed), tone: 'bad' },
+            { label: 'Absorbed by cover', value: F.usdM(r.covered), tone: 'good' },
+            { label: 'Residual at risk', value: F.usdM(r.residual), tone: 'bad' }
+          ],
+          points: [
+            `Losing <strong>${U.esc(r.node.name)}</strong> for ${state.days} days at ${state.sev}% severity puts ${F.usdM(r.exposed)} of sales inside the disruption window.`,
+            `Inventory cover absorbs ${F.usdM(r.covered)} of that — ${coverPct.toFixed(0)}% — which is why time-to-survive matters as much as time-to-recover.`,
+            `After the best-ranked mitigation, ${F.usdM(r.residual)} remains at risk. ${r.bindingMat ? `The binding constraint is <strong>${U.esc(r.bindingMat.name)}</strong>.` : ''}`
+          ],
+          actions: [{ label: 'See ranked mitigations', onClick: () => U.scrollToCard(mitCard) }]
+        };
+      }
     });
     wfCard.classList.add('col-12');
     out.appendChild(wfCard);
@@ -184,13 +202,50 @@ window.SCR = window.SCR || {};
     /* full-width lower row */
     const prodCard = U.card({
       title: 'Impacted SKUs under this scenario', sub: 'projected revenue loss before mitigation · click for the 360°',
-      cols: 7, flush: true
+      cols: 7, flush: true,
+      insight: () => {
+        const r = compute();
+        const rows = r.rows.slice().sort((a, b) => b.loss - a.loss);
+        const tot = rows.reduce((a, x) => a + x.loss, 0) || 1;
+        return {
+          agent: 'Scenario Twin Agent',
+          reads: [
+            { label: 'SKUs impacted', value: rows.length, tone: rows.length ? 'bad' : 'good' },
+            { label: 'Projected loss', value: F.usdM(+tot.toFixed(1)), tone: 'bad' },
+            { label: 'Worst SKU', value: rows.length ? F.usdM(+rows[0].loss.toFixed(1)) : '—', tone: 'bad' }
+          ],
+          points: [
+            `${rows.length} SKUs lose revenue if <strong>${U.esc(r.node.name)}</strong> goes down for ${state.days} days.`,
+            rows.length ? `<strong>${U.esc(rows[0].p.name)}</strong> takes the largest hit at ${F.usdM(+rows[0].loss.toFixed(1))}, ${((rows[0].loss / tot) * 100).toFixed(0)}% of the total.` : 'No SKUs impacted at this setting.',
+            'These are pre-mitigation figures — the bridge above shows what the ranked options claw back.'
+          ],
+          actions: rows.length ? [{ label: '360° on ' + rows[0].p.name, onClick: () => U.openProduct(rows[0].p.id) }] : []
+        };
+      }
     });
     grid.appendChild(prodCard);
 
     const mitCard = U.card({
       title: 'Mitigation options — ranked by net benefit', sub: 'risk removed minus cost, feasibility-checked by the Scenario Twin Agent',
-      cols: 5
+      cols: 5,
+      insight: () => {
+        const r = compute();
+        const best = r.opts[0];
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Options modelled', value: r.opts.length },
+            { label: 'Best net benefit', value: best ? F.usdM(+(best.cut * r.atRisk - best.cost).toFixed(1)) : '—', tone: 'good' },
+            { label: 'Risk it removes', value: best ? (best.cut * 100).toFixed(0) + '%' : '—' }
+          ],
+          points: [
+            'Ranking is net benefit — risk removed minus what the lever costs — so an expensive option that removes more risk can still lose to a cheap partial fix.',
+            best ? `Top option is <strong>${U.esc(best.name)}</strong>: removes ${(best.cut * 100).toFixed(0)}% of the ${F.usdM(r.atRisk)} at risk for ${F.usdM(best.cost)}.` : 'No options available.',
+            `Applying it leaves ${F.usdM(r.residual)} residual — the number worth carrying into an actual decision.`
+          ],
+          actions: [{ label: 'Open Alerts & Actions', onClick: () => SCR.navigate('actions') }]
+        };
+      }
     });
     grid.appendChild(mitCard);
 

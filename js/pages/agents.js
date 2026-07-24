@@ -129,7 +129,25 @@ window.SCR = window.SCR || {};
     const queueCard = U.card({
       title: 'Recommendations awaiting approval',
       sub: 'proposed by the Mitigation Strategist Agent · approving hands off to Execution & Workflow',
-      cols: 7
+      cols: 7,
+      insight: () => {
+        const q = (D.recommendations || []).filter(r => r.status === 'pending');
+        const byExp = q.slice().sort((a, b) => (b.exposure || 0) - (a.exposure || 0));
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Awaiting approval', value: q.length },
+            { label: 'Exposure addressed', value: F.usdM(+q.reduce((a, r) => a + (r.exposure || 0), 0).toFixed(1)), tone: 'bad' },
+            { label: 'Actions in flight', value: D.kpis.openActions }
+          ],
+          points: [
+            `${q.length} recommendation${q.length === 1 ? '' : 's'} ${q.length === 1 ? 'is' : 'are'} queued, together addressing ${F.usdM(+q.reduce((a, r) => a + (r.exposure || 0), 0).toFixed(1))} of exposure. Each was generated from a specific alert, so approving one creates a tracked action rather than a note.`,
+            byExp.length ? `Largest by exposure is <strong>${U.esc(byExp[0].title)}</strong> — ${U.esc(byExp[0].riskCut)} for ${U.esc(byExp[0].cost)}.` : 'The queue is empty — every recommendation has been actioned.',
+            'Approval hands off to the Execution & Workflow Agent, which is what puts it on the tracker with an owner and a due date.'
+          ],
+          actions: [{ label: 'Open Alerts & Actions', onClick: () => SCR.navigate('actions') }]
+        };
+      }
     });
     queueCard.id = 'agQueue';
     grid.appendChild(queueCard);
@@ -180,7 +198,28 @@ window.SCR = window.SCR || {};
     btnDigest.addEventListener('click', openDigest);
     const feedCard = U.card({
       title: 'Agent activity — last 3 hours', sub: 'what the layer sensed, computed and executed · click a row to open its agent',
-      cols: 5, actions: [btnDigest]
+      cols: 5, actions: [btnDigest],
+      insight: () => {
+        const feed = D.feed || [];
+        const byAgent = {};
+        const nameOf = k => { const a = (D.agents || []).find(x => x.key === k); return a ? a.name : k; };
+        feed.forEach(f => { const n = nameOf(f.agent); byAgent[n] = (byAgent[n] || 0) + 1; });
+        const busiest = Object.entries(byAgent).sort((a, b) => b[1] - a[1])[0];
+        return {
+          agent: 'Resilience Copilot',
+          reads: [
+            { label: 'Events (3h)', value: feed.length },
+            { label: 'Agents active', value: Object.keys(byAgent).length },
+            { label: 'Busiest', value: busiest ? busiest[1] + ' events' : '—' }
+          ],
+          points: [
+            `${feed.length} events in the last three hours across ${Object.keys(byAgent).length} agents — this is the attribution trail behind every alert and recommendation in the product.`,
+            busiest ? `<strong>${U.esc(busiest[0])}</strong> is most active with ${busiest[1]} events, which usually signals where conditions are changing fastest.` : '',
+            'Selecting any row opens that agent, with its live stats, what it watches and where to act on it.'
+          ].filter(Boolean),
+          actions: [{ label: 'Back to Executive Summary', onClick: () => SCR.navigate('executive') }]
+        };
+      }
     });
     grid.appendChild(feedCard);
     const feedWrap = U.el('<div class="feed"></div>');

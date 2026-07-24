@@ -52,7 +52,7 @@ window.SCR = window.SCR || {};
   /* Scatter with range sliders (original had draggable axis sliders) */
   function scatterCard(grid, cfg) {
     const U = SCR.ui, F = SCR.fmt;
-    const card = U.card({ title: cfg.title, sub: cfg.sub, cols: 6, chartClass: 'chart-lg' });
+    const card = U.card({ title: cfg.title, sub: cfg.sub, cols: 6, chartClass: 'chart-lg', insight: cfg.insight });
     if (cfg.id) card.id = cfg.id;
     grid.appendChild(card);
     const chart = SCR.charts.mount(card._chartEl, () => {
@@ -190,6 +190,28 @@ window.SCR = window.SCR || {};
       sub: 'bubble size = dependent NTS · drag the sliders to zoom · click for the material 360°',
       xName: 'VAR (MM USD)', yName: 'RRE — residual risk', yMin: 0, yMax: 1,
       yFmt: v => v.toFixed(1),
+      insight: () => {
+        const hot = mats.filter(m => m.rre >= 0.5 && m.var >= 10).sort((a, b) => b.var - a.var);
+        const w = mats.slice().sort((a, b) => (b.var * b.rre) - (a.var * a.rre))[0];
+        const single = mats.filter(m => m.singleSource);
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Materials', value: mats.length },
+            { label: 'High VAR + high RRE', value: hot.length, tone: hot.length ? 'bad' : 'good' },
+            { label: 'Single-sourced', value: single.length, tone: single.length ? 'bad' : 'good' }
+          ],
+          points: [
+            'Read the top-right quadrant first: high value at risk and high residual risk together means real money is exposed and the mitigation in place is not yet holding it.',
+            w ? `<strong>${U.esc(w.name)}</strong> is the worst combination at ${F.usdM(w.var)} VAR and an RRE of ${w.rre.toFixed(2)}.` : 'No materials in scope.',
+            `Bubble size is dependent net sales, so a large bubble far right is a material a lot of revenue leans on. ${single.length} material${single.length === 1 ? '' : 's'} here ${single.length === 1 ? 'has' : 'have'} only one qualified supplier.`
+          ],
+          actions: [
+            { label: 'See sourcing worklist', onClick: () => U.scrollToCard(document.getElementById('catAlt')) },
+            w ? { label: '360° on ' + w.name, onClick: () => U.openMaterial(w.id) } : null
+          ].filter(Boolean)
+        };
+      },
       points: () => mats.map(m => ({
         xy: [+m.var.toFixed(1), m.rre],
         size: 8 + Math.sqrt(m.depNTS) * 0.55,
@@ -206,6 +228,25 @@ window.SCR = window.SCR || {};
       title: 'VAR vs Current-Year Spend by supplier',
       sub: 'business exposure vs procurement spend · bubble size = AVAR · click for the supplier 360°',
       xName: 'VAR (MM USD)', yName: 'CY Spend (MM USD)',
+      insight: () => {
+        const byVar = sups.slice().sort((a, b) => b.var - a.var);
+        const w = byVar[0];
+        const lowSpendHighVar = sups.filter(x => x.var >= 20 && x.cySpend <= 40).sort((a, b) => b.var - a.var);
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Suppliers', value: sups.length },
+            { label: 'Highest VAR', value: w ? F.usdM(w.var) : '—', tone: 'bad' },
+            { label: 'Low spend, high risk', value: lowSpendHighVar.length, tone: lowSpendHighVar.length ? 'bad' : 'good' }
+          ],
+          points: [
+            'The useful asymmetry is bottom-right: suppliers carrying large value at risk on comparatively small spend. Commercial leverage is limited there, so the fix is usually a second source rather than a negotiation.',
+            w ? `<strong>${U.esc(w.name)}</strong> carries the most exposure at ${F.usdM(w.var)} VAR on ${F.usdM(w.cySpend)} of current-year spend.` : 'No suppliers in scope.',
+            lowSpendHighVar.length ? `${lowSpendHighVar.length} supplier${lowSpendHighVar.length === 1 ? '' : 's'} sit${lowSpendHighVar.length === 1 ? 's' : ''} in that low-spend, high-risk corner: ${lowSpendHighVar.slice(0, 3).map(x => U.esc(x.name)).join(', ')}.` : 'No supplier is disproportionately risky relative to its spend.'
+          ],
+          actions: w ? [{ label: '360° on ' + w.name, onClick: () => U.openSupplier(w.id) }] : []
+        };
+      },
       points: () => sups.map(s => ({
         xy: [+s.var.toFixed(1), s.spend],
         size: 9 + Math.sqrt(Math.max(0.3, s.avar)) * 4.6,
@@ -221,7 +262,26 @@ window.SCR = window.SCR || {};
     const nodeCard = U.card({
       title: 'Node Data Summary',
       sub: 'RRE trend · dependent NTS · sales impacted · VAR · AVAR per supplier node · click a row for the 360°',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const r = sups.slice().sort((a, b) => b.avar - a.avar);
+        const totAvar = r.reduce((a, x) => a + x.avar, 0) || 1;
+        const top3 = r.slice(0, 3);
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Supplier nodes', value: sups.length },
+            { label: 'Total AVAR', value: F.usdM(+totAvar.toFixed(1)), tone: 'bad' },
+            { label: 'Top 3 share', value: ((top3.reduce((a, x) => a + x.avar, 0) / totAvar) * 100).toFixed(0) + '%' }
+          ],
+          points: [
+            'Each row carries the same measures used everywhere else in the product, so a supplier\u2019s AVAR here is the identical figure that rolls into the executive total.',
+            r.length ? `<strong>${U.esc(r[0].name)}</strong> is the largest node at ${F.usdM(r[0].avar)} AVAR on ${F.usdM(r[0].depNTS)} of dependent net sales.` : 'No suppliers in scope.',
+            `The top three (${top3.map(x => U.esc(x.name)).join(', ')}) hold ${((top3.reduce((a, x) => a + x.avar, 0) / totAvar) * 100).toFixed(0)}% of supplier AVAR in this scope.`
+          ],
+          actions: r.length ? [{ label: '360° on ' + r[0].name, onClick: () => U.openSupplier(r[0].id) }] : []
+        };
+      }
     });
     nodeCard.id = 'catNodeData';
     grid.appendChild(nodeCard);
@@ -255,7 +315,29 @@ window.SCR = window.SCR || {};
     const riskCard = U.card({
       title: 'Node Risk Summary',
       sub: 'internal drivers + external feeds (Excel/BSI) normalized 0–1 · red = high · click a row for the 360°',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const scored = sups.map(x => ({ x, f: extFactors(x) }));
+        const avg = key => scored.reduce((a, s2) => a + s2.f[key], 0) / (scored.length || 1);
+        const keys = ['floodBSI', 'droughtBSI', 'political', 'economic'];
+        const NAME = { floodBSI: 'flood', droughtBSI: 'drought', political: 'political', economic: 'economic' };
+        const worstKey = keys.slice().sort((a, b) => avg(b) - avg(a))[0];
+        const worstSup = scored.slice().sort((a, b) => b.f[worstKey] - a.f[worstKey])[0];
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Suppliers scored', value: scored.length },
+            { label: 'Dominant driver', value: NAME[worstKey] },
+            { label: 'Mean score', value: avg(worstKey).toFixed(2), tone: avg(worstKey) >= 0.5 ? 'bad' : '' }
+          ],
+          points: [
+            'Every cell is normalised 0\u20131 so internal drivers and external feeds can be compared on one scale; red is high risk regardless of which column it sits in.',
+            `The strongest driver across this scope is <strong>${NAME[worstKey]}</strong>, averaging ${avg(worstKey).toFixed(2)}.`,
+            worstSup ? `<strong>${U.esc(worstSup.x.name)}</strong> is most exposed to it at ${worstSup.f[worstKey].toFixed(2)} — worth pairing with its commercial position before deciding whether to dual-source.` : ''
+          ].filter(Boolean),
+          actions: worstSup ? [{ label: '360° on ' + worstSup.x.name, onClick: () => U.openSupplier(worstSup.x.id) }] : []
+        };
+      }
     });
     riskCard.id = 'catRisk';
     grid.appendChild(riskCard);
@@ -284,7 +366,27 @@ window.SCR = window.SCR || {};
     const treeCard = U.card({
       title: 'Spend contribution — category → sub-category',
       sub: 'tree map of current-year spend · click to zoom',
-      cols: 5, chartClass: 'chart-lg'
+      cols: 5, chartClass: 'chart-lg',
+      insight: () => {
+        const byCat = {};
+        mats.forEach(m => { byCat[m.cat] = (byCat[m.cat] || 0) + (m.spend || 0); });
+        const r = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+        const tot = r.reduce((a, x) => a + x[1], 0) || 1;
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Categories', value: r.length },
+            { label: 'Largest', value: r.length ? r[0][0] : '—' },
+            { label: 'Its share', value: r.length ? ((r[0][1] / tot) * 100).toFixed(0) + '%' : '—' }
+          ],
+          points: [
+            'Area is current-year spend, so this is where procurement leverage actually sits — not where risk sits. Compare it against the risk views to find the mismatches.',
+            r.length ? `<strong>${U.esc(r[0][0])}</strong> is the largest block at ${F.usdM(+r[0][1].toFixed(1))}, ${((r[0][1] / tot) * 100).toFixed(0)}% of spend in scope.` : 'No spend in scope.',
+            'A category that is small here but prominent in the VAR views is the classic trap: little commercial leverage, disproportionate exposure.'
+          ],
+          actions: [{ label: 'Compare against risk', onClick: () => U.scrollToCard(document.getElementById('catSpend')) }]
+        };
+      }
     });
     treeCard.id = 'catTree';
     grid.appendChild(treeCard);
@@ -328,7 +430,27 @@ window.SCR = window.SCR || {};
 
     const dimCard = U.card({
       title: 'Risk-driver profile', sub: 'average driver scores across suppliers in scope',
-      cols: 7
+      cols: 7,
+      insight: () => {
+        const dims = ['fin', 'geo', 'rel', 'clim', 'qual', 'cyb'];
+        const NAME = { fin: 'financial', geo: 'geopolitical', rel: 'reliability', clim: 'climate', qual: 'quality', cyb: 'cyber' };
+        const avg = d => sups.reduce((a, x) => a + x.dims[d], 0) / (sups.length || 1);
+        const r = dims.slice().sort((a, b) => avg(b) - avg(a));
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Suppliers', value: sups.length },
+            { label: 'Weakest driver', value: NAME[r[0]] },
+            { label: 'Score (of 5)', value: avg(r[0]).toFixed(1), tone: avg(r[0]) >= 3 ? 'bad' : '' }
+          ],
+          points: [
+            `Averaged across ${sups.length} suppliers in scope, <strong>${NAME[r[0]]}</strong> risk scores highest at ${avg(r[0]).toFixed(1)} of 5.`,
+            `Lowest concern is ${NAME[r[r.length - 1]]} at ${avg(r[r.length - 1]).toFixed(1)}, so effort spent there returns less than effort on ${NAME[r[0]]}.`,
+            'These are the same driver scores that feed each supplier\u2019s residual risk, so improving one moves RRE and AVAR together.'
+          ],
+          actions: [{ label: 'Open the node risk matrix', onClick: () => U.scrollToCard(document.getElementById('catRisk')) }]
+        };
+      }
     });
     grid.appendChild(dimCard);
     const dimKeys = ['fin', 'qual', 'rel', 'geo', 'cyb', 'clim'];
@@ -346,7 +468,26 @@ window.SCR = window.SCR || {};
     /* ===== Alternate sourcing opportunities ===== */
     const altCard = U.card({
       title: 'Alternate sourcing opportunities', sub: 'risky single-source materials — qualification recommended (FR-CAT-07)',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const single = mats.filter(m => m.singleSource);
+        const risky = single.filter(m => m.ttr > m.tts);
+        const w = single.slice().sort((a, b) => b.avar - a.avar)[0];
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Single-source', value: single.length, tone: single.length ? 'bad' : 'good' },
+            { label: 'Also uncovered', value: risky.length, tone: risky.length ? 'bad' : 'good' },
+            { label: 'AVAR at stake', value: F.usdM(+single.reduce((a, m) => a + m.avar, 0).toFixed(1)), tone: 'bad' }
+          ],
+          points: [
+            `${single.length} material${single.length === 1 ? '' : 's'} in scope ${single.length === 1 ? 'has' : 'have'} exactly one qualified supplier, carrying ${F.usdM(+single.reduce((a, m) => a + m.avar, 0).toFixed(1))} of adjusted risk between them.`,
+            risky.length ? `${risky.length} of those also recover slower than they survive — qualification there buys days of cover, not just negotiating room.` : 'None of them currently recover slower than they survive.',
+            w ? `Start with <strong>${U.esc(w.name)}</strong>: ${F.usdM(w.avar)} AVAR, ${F.days(w.tts)} of cover against ${F.days(w.ttr)} to recover.` : ''
+          ].filter(Boolean),
+          actions: w ? [{ label: '360° on ' + w.name, onClick: () => U.openMaterial(w.id) }, { label: 'Model it in Scenario Studio', onClick: () => SCR.navigate('scenario') }] : []
+        };
+      }
     });
     altCard.id = 'catAlt';
     grid.appendChild(altCard);

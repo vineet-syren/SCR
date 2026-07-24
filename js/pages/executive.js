@@ -187,7 +187,29 @@ window.SCR = window.SCR || {};
     const prodCard = U.card({
       title: 'Product by Wtd. AVAR (MM USD)',
       sub: 'ranked by adjusted exposure · click a row for the SKU 360°',
-      cols: 6, flush: true
+      cols: 6, flush: true,
+      insight: () => {
+        const r = prods.slice().sort((a, b) => b.avar - a.avar);
+        const top3 = r.slice(0, 3), share = r.length ? (top3.reduce((a, p) => a + p.avar, 0) / r.reduce((a, p) => a + p.avar, 0)) * 100 : 0;
+        const weak = r.filter(p => p.ri < 60);
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Products in scope', value: r.length },
+            { label: 'Top 3 share of AVAR', value: share.toFixed(0) + '%', tone: share > 40 ? 'bad' : '' },
+            { label: 'RI below 60', value: weak.length, tone: weak.length ? 'bad' : 'good' }
+          ],
+          points: [
+            top3.length ? `<strong>${U.esc(top3[0].name)}</strong> carries the most adjusted exposure at ${top3[0].avar.toFixed(1)}M, on ${F.usdM(top3[0].nts)} of net sales.` : 'No products in this scope.',
+            `The top 3 products account for ${share.toFixed(0)}% of AVAR here — exposure is ${share > 40 ? 'concentrated, so a few fixes move the number' : 'spread broadly, so expect incremental gains'}.`,
+            weak.length ? `${weak.length} product${weak.length === 1 ? '' : 's'} sit${weak.length === 1 ? 's' : ''} below an RI of 60 and should be triaged first: ${weak.slice(0, 3).map(p => U.esc(p.name)).join(', ')}.` : 'Every product in scope holds an RI of 60 or better.'
+          ],
+          actions: [
+            { label: 'Open Value Streams', onClick: () => SCR.navigate('valuestream') },
+            top3.length ? { label: '360° on ' + top3[0].name, onClick: () => U.openProduct(top3[0].id) } : null
+          ].filter(Boolean)
+        };
+      }
     });
     prodCard.id = 'exExposure';
     grid.appendChild(prodCard);
@@ -216,7 +238,32 @@ window.SCR = window.SCR || {};
     const nodesCard = U.card({
       title: 'Top 10 Nodes by Adjusted Value at Risk (MM USD)',
       sub: 'suppliers, plants and DCs · click a bar for the node 360°',
-      cols: 6, chartClass: 'chart-lg', actions: [seg]
+      cols: 6, chartClass: 'chart-lg', actions: [seg],
+      insight: () => {
+        const top = D.nodes.slice().sort((a, b) => b[rankBy] - a[rankBy]).slice(0, 10);
+        const all = D.nodes.reduce((a, n) => a + n[rankBy], 0);
+        const share = all ? (top.reduce((a, n) => a + n[rankBy], 0) / all) * 100 : 0;
+        const byType = {};
+        top.forEach(n => { byType[n.type] = (byType[n.type] || 0) + 1; });
+        const label = rankBy === 'avar' ? 'AVAR' : rankBy === 'var' ? 'VAR' : 'sales impacted';
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Ranking by', value: label },
+            { label: 'Top-10 share', value: share.toFixed(0) + '%', tone: share > 50 ? 'bad' : '' },
+            { label: 'Worst node', value: top.length ? top[0][rankBy].toFixed(1) + 'M' : '—', tone: 'bad' }
+          ],
+          points: [
+            top.length ? `<strong>${U.esc(top[0].name)}</strong> (${U.esc(top[0].type)}) leads on ${label} at ${top[0][rankBy].toFixed(1)}M.` : 'No nodes ranked.',
+            `These 10 nodes carry ${share.toFixed(0)}% of all ${label} across the network — ${share > 50 ? 'a genuine concentration, so node-level fixes are the highest-leverage move' : 'the risk is comparatively distributed'}.`,
+            `Mix in the top 10: ${Object.entries(byType).map(([t, c]) => `${c} ${t.toLowerCase()}${c === 1 ? '' : 's'}`).join(', ')}. Switching the toggle re-ranks by ${rankBy === 'avar' ? 'raw VAR or sales impacted' : 'AVAR'} to test whether the same names persist.`
+          ],
+          actions: [
+            { label: 'Open Network Explorer', onClick: () => SCR.navigate('network') },
+            top.length ? { label: '360° on ' + top[0].name, onClick: () => top[0].type === 'Supplier' ? U.openSupplier(top[0].id) : U.openSite(top[0].id) } : null
+          ].filter(Boolean)
+        };
+      }
     });
     nodesCard.id = 'exTopNodes';
     grid.appendChild(nodesCard);
@@ -262,7 +309,27 @@ window.SCR = window.SCR || {};
 
     const wfCard = U.card({
       title: 'Adjusted value-at-risk bridge', sub: 'FY26 opening → today ($M AVAR) · decreases are risk removed',
-      cols: 7, chartClass: 'chart-md'
+      cols: 7, chartClass: 'chart-md',
+      insight: () => {
+        const steps = D.avarBridge.steps || [];
+        const ups = steps.filter(s => s.type === 'up'), downs = steps.filter(s => s.type === 'down');
+        const biggestUp = ups.slice().sort((a, b) => b.value - a.value)[0];
+        const biggestDown = downs.slice().sort((a, b) => a.value - b.value)[0];
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Risk added', value: '+' + ups.reduce((a, s) => a + s.value, 0).toFixed(1) + 'M', tone: 'bad' },
+            { label: 'Risk removed', value: downs.reduce((a, s) => a + s.value, 0).toFixed(1) + 'M', tone: 'good' },
+            { label: 'Closing AVAR', value: F.usdM(D.kpis.totalAVAR) }
+          ],
+          points: [
+            'Read this left to right: the opening bar is where FY26 started, each middle bar is what moved AVAR since, and the closing bar is where the enterprise stands today.',
+            biggestUp ? `The largest single addition is <strong>${U.esc(biggestUp.label)}</strong> at +${biggestUp.value.toFixed(1)}M — this is where new exposure entered the book.` : 'No step added exposure this year.',
+            biggestDown ? `The largest reduction is <strong>${U.esc(biggestDown.label)}</strong> at ${biggestDown.value.toFixed(1)}M, which is the ${F.usdM(D.kpis.mitigatedYtd)} retired year to date.` : 'No mitigation steps have landed yet.'
+          ],
+          actions: [{ label: 'See the programs behind this', onClick: () => SCR.navigate('actions') }]
+        };
+      }
     });
     grid.appendChild(wfCard);
     SCR.charts.waterfall(wfCard._chartEl, D.avarBridge.steps);
@@ -270,7 +337,28 @@ window.SCR = window.SCR || {};
     const secs = sectorAgg();
     const donutCard = U.card({
       title: 'AVAR by sector', sub: 'probability-adjusted exposure mix',
-      cols: 5, chartClass: 'chart-md'
+      cols: 5, chartClass: 'chart-md',
+      insight: () => {
+        const s = secs.slice().sort((a, b) => b.avar - a.avar);
+        const total = s.reduce((a, x) => a + x.avar, 0) || 1;
+        const lead = s[0], leadPct = lead ? (lead.avar / total) * 100 : 0;
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Total AVAR', value: F.usdM(D.kpis.totalAVAR), tone: 'bad' },
+            { label: 'Largest sector', value: lead ? lead.name : '—' },
+            { label: 'Its share', value: leadPct.toFixed(0) + '%' }
+          ],
+          points: [
+            lead ? `<strong>${U.esc(lead.name)}</strong> holds ${F.usdM(lead.avar)} of adjusted exposure — ${leadPct.toFixed(0)}% of the enterprise total.` : 'No sector data in scope.',
+            leadPct > 40
+              ? 'One sector dominating this mix means enterprise AVAR is effectively a bet on that sector\'s supply base.'
+              : 'No single sector dominates, so exposure is a portfolio problem rather than one sector\'s problem.',
+            `Ranked order: ${s.slice(0, 4).map(x => `${U.esc(x.name)} ${F.usdM(x.avar)}`).join(' · ')}.`
+          ],
+          actions: [{ label: 'Break down by region × sector', onClick: () => U.scrollToCard(document.getElementById('exMekko')) }]
+        };
+      }
     });
     grid.appendChild(donutCard);
     const donut = SCR.charts.mount(donutCard._chartEl, () => {
@@ -304,7 +392,28 @@ window.SCR = window.SCR || {};
 
     const mekkoCard = U.card({
       title: 'NTS by region × sector (mekko)', sub: 'column width = regional NTS · segment = sector share',
-      cols: 7, chartClass: 'chart-md'
+      cols: 7, chartClass: 'chart-md',
+      insight: () => {
+        const m = mekkoData();
+        const colTotal = c => Object.values(m.values[c]).reduce((a, b) => a + b, 0);
+        const grand = m.cols.reduce((a, c) => a + colTotal(c), 0) || 1;
+        const lead = m.cols[0];
+        const leadMix = lead ? Object.entries(m.values[lead]).sort((a, b) => b[1] - a[1])[0] : null;
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Regions', value: m.cols.length },
+            { label: 'Largest region', value: lead || '—' },
+            { label: 'Its NTS share', value: lead ? ((colTotal(lead) / grand) * 100).toFixed(0) + '%' : '—' }
+          ],
+          points: [
+            'Column width is regional net sales and segment height is that sector\'s share, so area equals revenue — wide columns are where the money is, not just where the risk is.',
+            lead ? `<strong>${U.esc(lead)}</strong> is the widest column at ${F.usdM(colTotal(lead))} NTS, ${((colTotal(lead) / grand) * 100).toFixed(0)}% of the total.` : 'No regional data.',
+            leadMix ? `Inside ${U.esc(lead)}, <strong>${U.esc(leadMix[0])}</strong> is the largest sector at ${F.usdM(leadMix[1])} — a disruption there hits the widest part of the book.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Trace it in the network', onClick: () => SCR.navigate('network') }]
+        };
+      }
     });
     mekkoCard.id = 'exMekko';
     grid.appendChild(mekkoCard);
@@ -313,7 +422,26 @@ window.SCR = window.SCR || {};
     const mitKeys = Object.keys(D.monthly.mitigatedCum);
     const areaCard = U.card({
       title: 'Cumulative AVAR mitigated', sub: 'FY26 by mitigation lever ($M)',
-      cols: 5, chartClass: 'chart-md'
+      cols: 5, chartClass: 'chart-md',
+      insight: () => {
+        const last = a => (a && a.length ? a[a.length - 1] : 0);
+        const byLever = mitKeys.map(k => ({ k, v: last(D.monthly.mitigatedCum[k]) })).sort((a, b) => b.v - a.v);
+        const total = byLever.reduce((a, x) => a + x.v, 0);
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Mitigated YTD', value: F.usdM(+total.toFixed(1)), tone: 'good' },
+            { label: 'Top lever', value: byLever.length ? byLever[0].k : '—' },
+            { label: 'Levers running', value: mitKeys.length }
+          ],
+          points: [
+            `Bands are stacked, so the top edge is total AVAR retired — ${F.usdM(+total.toFixed(1))} by the latest month, which is the same figure as the bridge's mitigated step.`,
+            byLever.length ? `<strong>${U.esc(byLever[0].k)}</strong> contributes most at ${F.usdM(+byLever[0].v.toFixed(1))}, ${total ? ((byLever[0].v / total) * 100).toFixed(0) : 0}% of everything retired.` : '',
+            byLever.length > 1 ? `Weakest lever is <strong>${U.esc(byLever[byLever.length - 1].k)}</strong> at ${F.usdM(+byLever[byLever.length - 1].v.toFixed(1))} — worth asking whether it is under-funded or simply slower to land.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Open Alerts & Actions', onClick: () => SCR.navigate('actions') }]
+        };
+      }
     });
     grid.appendChild(areaCard);
     SCR.charts.mount(areaCard._chartEl, () => {
@@ -346,7 +474,27 @@ window.SCR = window.SCR || {};
 
     const alertsCard = U.card({
       title: 'Highest-priority alerts', sub: 'ranked by severity × exposure · click to inspect',
-      cols: 7, flush: true
+      cols: 7, flush: true,
+      insight: () => {
+        const openA = D.alerts.filter(a => a.status !== 'closed');
+        const crit = openA.filter(a => a.sev === 'critical');
+        const exp = +openA.reduce((a, x) => a + x.exposure, 0).toFixed(1);
+        const top = openA.slice().sort((a, b) => b.exposure - a.exposure)[0];
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Open alerts', value: openA.length },
+            { label: 'Critical', value: crit.length, tone: crit.length ? 'bad' : 'good' },
+            { label: 'Exposure', value: F.usdM(exp), tone: 'bad' }
+          ],
+          points: [
+            `${openA.length} exceptions are unresolved, carrying ${F.usdM(exp)} of linked value at risk.`,
+            crit.length ? `${crit.length} are critical — a node already failing, or one that will inside its time-to-survive.` : 'Nothing is currently critical.',
+            top ? `Largest single exposure is <strong>${U.esc(top.title)}</strong> at ${F.usdM(top.exposure)}, owned by ${U.esc(top.owner)}.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Open the full inbox', onClick: () => SCR.navigate('actions') }]
+        };
+      }
     });
     grid.appendChild(alertsCard);
     const sevRank = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -365,7 +513,21 @@ window.SCR = window.SCR || {};
     btnBrief.addEventListener('click', openExecBrief);
     const digestCard = U.card({
       title: 'Agentic layer — latest', sub: 'live feed from the 6 resilience agents',
-      cols: 5, actions: [btnAgents, btnBrief]
+      cols: 5, actions: [btnAgents, btnBrief],
+      insight: () => ({
+        agent: 'Resilience Copilot',
+        reads: [
+          { label: 'Agents running', value: 6 },
+          { label: 'Open alerts raised', value: D.alerts.filter(a => a.status !== 'closed').length },
+          { label: 'Actions in flight', value: D.kpis.openActions }
+        ],
+        points: [
+          'Six agents run continuously: Network Sensing watches for signals, Impact & VAR prices them, TTS Watch tracks inventory cover, Mitigation Strategist proposes fixes, Execution & Workflow lands them, and Scenario Twin stress-tests them.',
+          'This feed is the audit trail — every alert and recommendation elsewhere in the product traces back to one of these agents, so nothing here is unattributed.',
+          `They are currently holding ${D.alerts.filter(a => a.status !== 'closed').length} open alerts and ${D.kpis.openActions} actions in flight.`
+        ],
+        actions: [{ label: 'Open Recommendations', onClick: () => SCR.navigate('agents') }]
+      })
     });
     grid.appendChild(digestCard);
     const feedWrap = U.el('<div class="feed"></div>');

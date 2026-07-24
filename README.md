@@ -44,7 +44,7 @@ Opening `index.html` directly from the filesystem also works (no ES modules).
 | **Value Streams** | Value Chain / Stream Leader — product & market risk | **Column + line** (NTS + Wtd AVAR columns with RI on an aligned panel — no dual axis), **Bubble** (growth × margin × NTS), **Waterfall** (revenue bridge FY25→FY26), **Heat map** (market × month exposure), TTS-vs-TTR gap bars, missing TTR/TTS/RRE strip |
 | **Category & Suppliers** | Category / Procurement Leader — sourcing risk | **Bubble** (spend × risk × AVAR), **Tree map** (spend by category → sub-category), node data summary, risk-driver profile, alternate-sourcing worklist |
 | **Site Resilience** | SC Site Leader — plant/DC continuity | Threshold bars (which material stops production first), **Area** (inventory runway), risk-factor panel, playbook tracker |
-| **Network Explorer** | Digital twin | Layered dependency graph (supplier → material → plant → DC → market, red = single-source), **Sankey** (NTS value flow), single-points-of-failure list |
+| **Network Explorer** | Digital twin | **Sankey dependency trace** (supplier → material → plant → DC → market; ribbon width = NTS carried, red = single-source), enterprise value flow by material category, single-points-of-failure list |
 | **Scenario Studio** | What-if simulation with live recompute | Compare tiles, **Waterfall** (exposed → inventory cover → mitigation → residual), ranked mitigation options |
 | **Alerts & Actions** | Exception management | **Funnel** (signal → executed action), **Gantt** (resilience programs), action tracker with RRE before/after |
 | **Recommendations** | The agentic layer | Approval queue, agent activity feed, daily digest |
@@ -61,7 +61,11 @@ Cross-cutting:
 - **Resilience Copilot** — a floating dock bottom-right (Terova CopilotDock pattern):
   an extended FAB expands into a chat panel with persona-specific sample questions,
   live-computed agent-attributed answers, action chips, drill-through and a
-  new-conversation reset. Data freshness lives behind a refresh icon tooltip in the
+  new-conversation reset. Every business KPI is answerable by name — NTS in scope,
+  VAR, weighted AVAR, enterprise RI, TTR > TTS components, AVAR mitigated YTD,
+  detection lead, single-source count, alerts and actions — as a value ("NTS in
+  scope") or a definition ("how is AVAR calculated"), plus TTS/TTR/RRE concepts
+  and a full KPI board on "show me all KPIs". Data freshness lives behind a refresh icon tooltip in the
   app bar (weekly recalc + daily external feeds).
 - **360° drawers** — click any supplier / material / product / site / alert anywhere
   for a detail drawer with facts, 12-month trends, TTS-vs-TTR bars and cross-links.
@@ -101,6 +105,11 @@ each persona page. Signature elements modernized from the original screenshots: 
 with the insight bulb, teal-headed tables, the Node Overview drill (product list → Node
 AVAR vs Sales Impacted with AVAR/SALES toggle and in-cell bars), the Category node data
 summary (multi-measure in-row bars) and the Node Risk Summary heat matrix.
+
+**AI agent insights everywhere.** Every card carries an "AI insights" button top-right
+that opens an agent-attributed drawer: the live readings behind that card, what the agent
+sees in them, and where to go next. Content is computed at click time, so it reflects
+whatever filters are active.
 
 **Every KPI tile is a drill.** Each icon-chip tile in a strip either scrolls-and-highlights
 the section that explains it (e.g. Nodes → the Top-10 ranking, Spend → the spend tree map)

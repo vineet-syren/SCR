@@ -1,9 +1,9 @@
 /* ============================================================
    SCR · pages/network.js
    Network Explorer — the supply chain digital twin.
-   Layered dependency graph (supplier → material → plant → DC →
-   market) with product scoping · Sankey value flow (category →
-   plant → DC → region) · single-point-of-failure list.
+   Sankey dependency trace (supplier → material → plant → DC →
+   market) with product scoping · enterprise value flow by material
+   category · single-point-of-failure list.
    ============================================================ */
 window.SCR = window.SCR || {};
 
@@ -66,6 +66,63 @@ window.SCR = window.SCR || {};
     return { nodes, links: uniq };
   }
 
+  /* Dependency trace as a Sankey: supplier → material → plant → DC → market,
+     with the traced product's NTS attributed along every path. Value is
+     conserved at each stage, so ribbon width is directly comparable across
+     the whole chain. Single-source supplier→material edges are flagged. */
+  function buildTraceSankey() {
+    const D = SCR.data;
+    const prods = state.product === 'all' ? D.products : [D.productById(state.product)].filter(Boolean);
+    if (!prods.length) return { nodes: [], links: [], tierOf: {}, single: new Set() };
+
+    const flows = {};              // 'a␟b' -> value
+    const tierOf = {};             // node name -> tier
+    const single = new Set();      // 'a␟b' keys that are sole-sourced
+    const put = (n, tier) => { tierOf[n] = tier; };
+    const bump = (a, b, v) => { const k = a + '␟' + b; flows[k] = (flows[k] || 0) + v; };
+
+    prods.forEach(p => {
+      const mats = p.materials.map(D.materialById).filter(Boolean);
+      if (!mats.length) return;
+      const perMat = p.nts / mats.length;
+      mats.forEach(m => {
+        put(m.name, 'Material');
+        const sups = m.suppliers.map(D.supplierById).filter(Boolean);
+        // supplier → material
+        sups.forEach(s => {
+          put(s.name, 'Supplier');
+          bump(s.name, m.name, perMat / sups.length);
+          if (m.singleSource) single.add(s.name + '␟' + m.name);
+        });
+        // material → plant (only plants this product actually runs on)
+        const pl = p.plants.map(D.plantById).filter(Boolean).filter(x => m.plants.includes(x.id));
+        const plants = pl.length ? pl : p.plants.map(D.plantById).filter(Boolean);
+        plants.forEach(x => { put(x.name, 'Plant'); bump(m.name, x.name, perMat / plants.length); });
+      });
+      // plant → DC → market, carrying the same NTS
+      const plants = p.plants.map(D.plantById).filter(Boolean);
+      const dcs = p.dcs.map(D.dcById).filter(Boolean);
+      if (!plants.length || !dcs.length) return;
+      plants.forEach(x => dcs.forEach(d => {
+        put(d.name, 'DC');
+        bump(x.name, d.name, p.nts / plants.length / dcs.length);
+      }));
+      dcs.forEach(d => {
+        const served = p.markets.map(D.marketById).filter(Boolean).filter(mk => d.markets.includes(mk.id));
+        const list = served.length ? served : p.markets.map(D.marketById).filter(Boolean);
+        list.forEach(mk => { put(mk.name, 'Market'); bump(d.name, mk.name, p.nts / dcs.length / list.length); });
+      });
+    });
+
+    const names = new Set();
+    const links = Object.keys(flows).map(k => {
+      const [a, b] = k.split('␟');
+      names.add(a); names.add(b);
+      return { source: a, target: b, value: +flows[k].toFixed(1), single: single.has(k) };
+    }).filter(l => l.value > 0);
+    return { nodes: [...names].map(n => ({ name: n })), links, tierOf, single };
+  }
+
   /* Sankey: material category → plant → DC → region, NTS-attributed */
   function buildSankey() {
     const D = SCR.data;
@@ -100,6 +157,46 @@ window.SCR = window.SCR || {};
     return { nodes: [...names].map(n => ({ name: n })), links };
   }
 
+  /* Open the nodes behind a scope chip. Rows route into the existing 360°
+     drawers where one exists for that tier. */
+  function openTierList(tier, g) {
+    const D = SCR.data, F = SCR.fmt, U = SCR.ui;
+    const OPEN = { Supplier: U.openSupplier, Material: U.openMaterial, Plant: U.openSite };
+    const LABEL = { Supplier: 'Suppliers', Material: 'Materials', Plant: 'Plants', DC: 'Distribution centres', Market: 'Markets', Single: 'Single-source dependencies' };
+    const scope = state.product === 'all' ? 'the entire network' : D.productById(state.product).name;
+
+    if (tier === 'Single') {
+      const rows = g.links.filter(l => l[2]).map(l => {
+        const s = g.nodes.find(n => n.id === l[0]), m = g.nodes.find(n => n.id === l[1]);
+        return { s, m };
+      }).filter(r => r.s && r.m);
+      U.openDrawer('Network scope', 'Single-source dependencies', body => {
+        body.appendChild(U.el(`<p class="muted" style="font-size:12.5px;margin:0 0 12px">
+          ${rows.length} material${rows.length === 1 ? '' : 's'} in ${U.esc(scope)} ${rows.length === 1 ? 'has' : 'have'} exactly one qualified supplier.
+          If that supplier stops, the material stops — there is no second source to switch to.</p>`));
+        if (!rows.length) { body.appendChild(U.el('<div class="empty">No single-source links in this scope.</div>')); return; }
+        const t = U.table(
+          [{ h: 'Material', cell: r => `<span class="cell-main">${U.esc(r.m.name)}</span><span class="cell-sub">sole supplier · ${U.esc(r.s.name)}</span>` },
+           { h: 'AVAR', cls: 'num', cell: r => F.usdM(r.m.value) }],
+          rows, r => U.openMaterial(r.m.id));
+        body.appendChild(t);
+      });
+      return;
+    }
+
+    const nodes = g.nodes.filter(n => n.tier === tier).sort((a, b) => b.value - a.value);
+    U.openDrawer('Network scope', LABEL[tier] + ' in scope', body => {
+      body.appendChild(U.el(`<p class="muted" style="font-size:12.5px;margin:0 0 12px">
+        ${nodes.length} ${LABEL[tier].toLowerCase()} feeding ${U.esc(scope)}, ranked by the AVAR carried at the node.
+        ${OPEN[tier] ? 'Select any row for its 360°.' : ''}</p>`));
+      if (!nodes.length) { body.appendChild(U.el('<div class="empty">Nothing in this tier for the current scope.</div>')); return; }
+      body.appendChild(U.table(
+        [{ h: LABEL[tier].replace(/s$/, ''), cell: n => `<span class="cell-main">${U.esc(n.name)}</span><span class="cell-sub">${U.esc(n.sub || '')}</span>` },
+         { h: tier === 'Market' ? 'NTS impact' : 'AVAR', cls: 'num', cell: n => F.usdM(+n.value.toFixed(1)) }],
+        nodes, OPEN[tier] ? (n => OPEN[tier](n.id)) : null));
+    });
+  }
+
   function render(host, opts) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
     if (opts.product) state.product = opts.product;
@@ -119,111 +216,147 @@ window.SCR = window.SCR || {};
         </select>
       </label>
       <span class="fb-note" style="margin-left:auto"><span class="chip-row">
-        <span class="badge neutral plain">${tierCount('Supplier')} suppliers</span>
-        <span class="badge neutral plain">${tierCount('Material')} materials</span>
-        <span class="badge neutral plain">${tierCount('Plant')} plants</span>
-        <span class="badge neutral plain">${tierCount('DC')} DCs</span>
-        <span class="badge neutral plain">${tierCount('Market')} markets</span>
-        <span class="badge ${singleLinks ? 'critical' : 'low'}">${singleLinks} single-source link${singleLinks === 1 ? '' : 's'}</span>
+        <span class="badge neutral plain chip-link" data-tier="Supplier">${tierCount('Supplier')} suppliers</span>
+        <span class="badge neutral plain chip-link" data-tier="Material">${tierCount('Material')} materials</span>
+        <span class="badge neutral plain chip-link" data-tier="Plant">${tierCount('Plant')} plants</span>
+        <span class="badge neutral plain chip-link" data-tier="DC">${tierCount('DC')} DCs</span>
+        <span class="badge neutral plain chip-link" data-tier="Market">${tierCount('Market')} markets</span>
+        <span class="badge chip-link ${singleLinks ? 'critical' : 'low'}" data-tier="Single">${singleLinks} single-source link${singleLinks === 1 ? '' : 's'}</span>
       </span></span>
     </div>`);
     host.appendChild(fb);
+    // Each scope chip opens the nodes it counts, so the number is a way in
+    // rather than a dead statistic.
+    fb.querySelectorAll('.chip-link').forEach(chip => {
+      const NOUN = { Supplier: 'suppliers', Material: 'materials', Plant: 'plants', DC: 'distribution centres', Market: 'markets' };
+      chip.title = chip.dataset.tier === 'Single'
+        ? 'List the single-source dependencies in this scope'
+        : 'List the ' + NOUN[chip.dataset.tier] + ' in this scope';
+      chip.addEventListener('click', () => openTierList(chip.dataset.tier, g));
+    });
     fb.querySelector('#fProd').addEventListener('change', e => {
       state.product = e.target.value;
       SCR.navigate('network');
     });
     const grid = U.el('<div class="grid grid-12"></div>');
     host.appendChild(grid);
-
-    /* ===== Layered dependency graph ===== */
-    const graphCard = U.card({
-      title: state.product === 'all' ? 'Supply network — digital twin' : 'Dependency trace — ' + D.productById(state.product).name,
-      sub: 'node size = AVAR at the node · click any node for its 360°',
-      cols: 12, chartClass: state.product === 'all' ? 'chart-xxl' : 'chart-xl'
-    });
-    grid.appendChild(graphCard);
-    const graphChart = SCR.charts.mount(graphCard._chartEl, () => {
-      const t = SCR.theme.tokens();
-      const tiers = Object.keys(TIER);
-      const counts = {};
-      g.nodes.forEach(n => { counts[n.tier] = (counts[n.tier] || 0) + 1; });
-      const yPos = {};
-      const dense = g.nodes.length > 44;
-      // lay out in the container's own pixel space so fit-to-view stays uniform
-      const el = graphCard._chartEl;
-      const W = Math.max(560, el.clientWidth || 900);
-      const H = Math.max(380, el.clientHeight || 460);
-      const x0 = 150, x1 = W - 130, y0 = 44, y1 = H - 16;
-      const nodes = g.nodes.map(n => {
-        yPos[n.tier] = (yPos[n.tier] || 0) + 1;
-        const total = counts[n.tier];
-        const y = y0 + (yPos[n.tier] - 0.5) / total * (y1 - y0);
+    /* ===== Dependency trace (Sankey) =====
+       Replaces the earlier node-link graph: the same five tiers, but ribbon
+       width carries NTS, labels never collide, and nothing is hidden at
+       enterprise scale. */
+    const trace = buildTraceSankey();
+    const TIER_SLOT = { Supplier: 1, Material: 2, Plant: 0, DC: 3, Market: 4 };
+    const traceCard = U.card({
+      title: state.product === 'all'
+        ? 'Supply network — digital twin'
+        : 'Dependency trace — ' + D.productById(state.product).name,
+      sub: 'supplier → material → plant → DC → market · ribbon width = NTS carried along that path · click any node for its 360°',
+      cols: 12, chartClass: 'chart-xxl',
+      insight: () => {
+        const single = g.links.filter(l => l[2]).length;
+        const top = g.nodes.slice().sort((a, b) => b.value - a.value)[0];
+        const counts = {};
+        g.nodes.forEach(n => { counts[n.tier] = (counts[n.tier] || 0) + 1; });
+        const byTarget = {};
+        trace.links.forEach(l => { byTarget[l.target] = (byTarget[l.target] || 0) + l.value; });
+        const hub = Object.entries(byTarget).sort((a, b) => b[1] - a[1])[0];
         return {
-          id: n.id, name: n.name,
-          x: x0 + TIER[n.tier].x / 4 * (x1 - x0), y,
-          symbolSize: dense
-            ? Math.max(6, Math.min(15, 6 + Math.sqrt(Math.max(0.1, n.value)) * 1.9))
-            : Math.max(9, Math.min(34, 9 + Math.sqrt(Math.max(0.1, n.value)) * 4.4)),
-          category: tiers.indexOf(n.tier),
-          label: {
-            show: counts[n.tier] <= 16,
-            position: n.tier === 'Supplier' ? 'left' : n.tier === 'Market' ? 'right' : 'top',
-            fontSize: 10.5, color: t.ink2,
-            formatter: () => n.name.length > 19 ? n.name.slice(0, 18) + '…' : n.name
-          },
-          itemStyle: {
-            color: n.riskColorScore != null && n.riskColorScore >= 3.5
-              ? t.status.critical
-              : t.series[TIER[n.tier].slot],
-            borderColor: t.surface, borderWidth: 1.5
-          },
-          meta: n
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Nodes in scope', value: g.nodes.length },
+            { label: 'Dependencies', value: g.links.length },
+            { label: 'Single-source', value: single, tone: single ? 'bad' : 'good' }
+          ],
+          points: [
+            `${g.nodes.length} nodes across five tiers — ${Object.entries(counts).map(([t, c]) => `${c} ${t.toLowerCase()}${c === 1 ? '' : 's'}`).join(', ')} — joined by ${g.links.length} dependencies.`,
+            hub ? `<strong>${U.esc(hub[0])}</strong> is the largest convergence point with ${F.usdM(+hub[1].toFixed(1))} of NTS passing through it. Concentration mid-network is exactly what a single outage exploits.` : '',
+            single ? `${single} supplier→material link${single === 1 ? ' is' : 's are'} drawn red because the material has only one qualified supplier — those edges have no fallback.` : 'No single-source links in this scope.'
+          ].filter(Boolean),
+          actions: [{ label: 'List single points of failure', onClick: () => openTierList('Single', g) }]
         };
-      });
+      }
+    });
+    grid.appendChild(traceCard);
+    // The Sankey lays columns out itself, so tier identity comes from a legend
+    // rather than axis labels.
+    traceCard.querySelector('.card-body').insertBefore(
+      U.el(`<div class="tier-legend">${
+        ['Supplier', 'Material', 'Plant', 'DC', 'Market']
+          .map((tr, i) => `<span><i style="background:var(--series-${TIER_SLOT[tr] + 1})"></i>${tr}</span>`)
+          .join('<span class="tl-arrow">→</span>')
+      }<span class="tl-single"><i></i>single-source</span></div>`),
+      traceCard._chartEl);
+    const traceChart = SCR.charts.mount(traceCard._chartEl, () => {
+      const t = SCR.theme.tokens();
+      if (!trace.links.length) return { series: [] };
       return Object.assign(SCR.theme.baseOption(), {
         tooltip: Object.assign(SCR.theme.baseOption().tooltip, {
-          formatter: p => {
-            if (p.dataType === 'edge') return null;
-            const n = p.data.meta;
-            return `<strong>${n.name}</strong> · ${n.tier}<br/>${n.sub}${n.tier !== 'Market' ? `<br/>AVAR ${F.usdM(n.value)}` : ''}`;
-          }
-        }),
-        legend: Object.assign(SCR.theme.baseOption().legend, {
-          top: 0, data: tiers.map((tr, i) => ({ name: tr, itemStyle: { color: t.series[TIER[tr].slot] } }))
+          formatter: p => p.dataType === 'edge'
+            ? `<strong>${p.data.source}</strong> → <strong>${p.data.target}</strong><br/>${F.usdM(p.data.value)} NTS carried${p.data.single ? '<br/><span style="color:#dc2626">single-source dependency</span>' : ''}`
+            : `<strong>${p.name}</strong> · ${trace.tierOf[p.name] || ''}<br/>${F.usdM(+p.value.toFixed(1))} NTS through this node`
         }),
         series: [{
-          type: 'graph', layout: 'none',
-          left: 60, right: 84, top: 46, bottom: 18,
-          categories: tiers.map(tr => ({ name: tr, itemStyle: { color: t.series[TIER[tr].slot] } })),
-          nodes,
-          edges: g.links.map(l => ({
-            source: l[0], target: l[1],
-            lineStyle: {
-              color: l[2] ? t.status.critical : (t.isDark ? 'rgba(148,163,184,.30)' : 'rgba(100,116,139,.28)'),
-              width: l[2] ? 2 : 1.1,
-              curveness: 0.24
-            }
+          type: 'sankey',
+          left: 8, right: 128, top: 12, bottom: 8,
+          nodeWidth: 13, nodeGap: 9,
+          nodeAlign: 'left',
+          data: trace.nodes.map(n => ({
+            name: n.name,
+            itemStyle: { color: t.series[TIER_SLOT[trace.tierOf[n.name]] != null ? TIER_SLOT[trace.tierOf[n.name]] : 7], borderColor: t.surface }
           })),
-          emphasis: { focus: 'adjacency', lineStyle: { width: 2.4 } },
-          roam: true, scaleLimit: { min: 0.7, max: 2.5 }
+          links: trace.links.map(l => Object.assign({}, l, {
+            lineStyle: l.single
+              ? { color: t.status.critical, opacity: 0.42 }
+              : { color: 'gradient', opacity: 0.26 }
+          })),
+          lineStyle: { curveness: 0.5 },
+          // Middle-column labels necessarily sit over outgoing ribbons; a halo in
+          // the surface color keeps them legible without hiding the flow.
+          label: {
+            color: t.ink2, fontSize: 10.5,
+            textBorderColor: t.surface, textBorderWidth: 3,
+            formatter: p => p.name.length > 22 ? p.name.slice(0, 21) + '…' : p.name
+          },
+          emphasis: { focus: 'adjacency' }
         }]
       });
     });
-    if (graphChart) graphChart.on('click', p => {
-      if (p.dataType !== 'node' || !p.data.meta) return;
-      const n = p.data.meta;
-      if (n.tier === 'Supplier') U.openSupplier(n.id);
-      else if (n.tier === 'Material') U.openMaterial(n.id);
-      else if (n.tier === 'Plant' || n.tier === 'DC') U.openSite(n.id);
-      else if (n.tier === 'Market') { /* market: filter value streams */ SCR.navigate('valuestream', {}); }
+    if (traceChart) traceChart.on('click', p => {
+      if (p.dataType !== 'node') return;
+      const D2 = SCR.data;
+      const s = D2.suppliers.find(x => x.name === p.name); if (s) return U.openSupplier(s.id);
+      const m = D2.materials.find(x => x.name === p.name); if (m) return U.openMaterial(m.id);
+      const pl = D2.plants.find(x => x.name === p.name); if (pl) return U.openSite(pl.id);
+      const d = D2.dcs.find(x => x.name === p.name); if (d) return U.openSite(d.id);
     });
 
     /* ===== Sankey value flow ===== */
     const sank = buildSankey();
     const sankCard = U.card({
-      title: 'Value flow through the network (Sankey)',
-      sub: 'NTS attribution: material category → plant → distribution center → market region ($M)',
-      cols: 7, chartClass: 'chart-xl'
+      title: 'Value flow by material category',
+      sub: 'enterprise-wide roll-up — not narrowed by the product trace above · category → plant → DC → market region ($M)',
+      cols: 7, chartClass: 'chart-xl',
+      insight: () => {
+        const sk = buildSankey();
+        const byTarget = {};
+        sk.links.forEach(l => { byTarget[l.target] = (byTarget[l.target] || 0) + l.value; });
+        const widest = sk.links.slice().sort((a, b) => b.value - a.value)[0];
+        const hub = Object.entries(byTarget).sort((a, b) => b[1] - a[1])[0];
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'Flow stages', value: 4 },
+            { label: 'Widest single flow', value: widest ? F.usdM(+widest.value.toFixed(1)) : '—' },
+            { label: 'Largest hub', value: hub ? hub[0] : '—' }
+          ],
+          points: [
+            'Ribbon width is net sales attributed along that path, so this shows where revenue physically travels — material category, through plant and DC, to market region.',
+            widest ? `The heaviest single flow is <strong>${U.esc(widest.source)} → ${U.esc(widest.target)}</strong> at ${F.usdM(+widest.value.toFixed(1))}.` : 'No flows in scope.',
+            hub ? `<strong>${U.esc(hub[0])}</strong> is the biggest convergence point at ${F.usdM(+hub[1].toFixed(1))} passing through it — concentration in the middle of a network is exactly what a single outage exploits.` : ''
+          ].filter(Boolean),
+          actions: [{ label: 'Open Site Resilience', onClick: () => SCR.navigate('site') }]
+        };
+      }
     });
     grid.appendChild(sankCard);
     SCR.charts.mount(sankCard._chartEl, () => {
@@ -254,7 +387,25 @@ window.SCR = window.SCR || {};
     const spofCard = U.card({
       title: 'Single points of failure',
       sub: 'sole-sourced dependencies ranked by AVAR',
-      cols: 5, flush: true
+      cols: 5, flush: true,
+      insight: () => {
+        const spof = D.materials.filter(m => m.singleSource).sort((a, b) => b.avar - a.avar);
+        const uncovered = spof.filter(m => m.ttr > m.tts);
+        return {
+          agent: 'Mitigation Strategist Agent',
+          reads: [
+            { label: 'Single points of failure', value: spof.length, tone: spof.length ? 'bad' : 'good' },
+            { label: 'AVAR concentrated', value: F.usdM(+spof.reduce((a, m) => a + m.avar, 0).toFixed(1)), tone: 'bad' },
+            { label: 'Also uncovered', value: uncovered.length, tone: uncovered.length ? 'bad' : 'good' }
+          ],
+          points: [
+            `${spof.length} materials across the enterprise have exactly one qualified supplier, concentrating ${F.usdM(+spof.reduce((a, m) => a + m.avar, 0).toFixed(1))} of adjusted risk on those relationships.`,
+            spof.length ? `<strong>${U.esc(spof[0].name)}</strong> is the largest at ${F.usdM(spof[0].avar)} AVAR.` : 'No single points of failure.',
+            uncovered.length ? `${uncovered.length} of them also recover slower than they survive — that combination is the shortest path from a supplier event to lost sales.` : 'None of them recover slower than they survive.'
+          ],
+          actions: [{ label: 'Open sourcing worklist', onClick: () => SCR.navigate('category') }]
+        };
+      }
     });
     grid.appendChild(spofCard);
     const spofs = D.materials.filter(m => m.singleSource)

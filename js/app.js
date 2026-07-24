@@ -17,28 +17,28 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
   /* ================= Persona registry ================= */
   const PERSONAS = [
     {
-      id: 'rrl', short: 'R&R', name: 'Risk & Resilience Leader', color: '#8b5cf6',
+      id: 'rrl', short: 'R&R', name: 'Risk & Resilience Leader', color: '#8b5cf6', tag: 'Enterprise exposure',
       role: 'Enterprise-wide view of vulnerabilities across value streams, nodes and geographies.',
       lens: 'Where is the largest exposure, and which mitigation deserves investment first?',
       home: 'executive',
       suggests: ['Top 5 risk nodes by AVAR', 'Biggest value at risk right now', 'Daily resilience brief', 'Which products have TTR > TTS?']
     },
     {
-      id: 'vsl', short: 'VSL', name: 'Value Chain / Stream Leader', color: '#0d9488',
+      id: 'vsl', short: 'VSL', name: 'Value Chain / Stream Leader', color: '#0d9488', tag: 'Products & value streams',
       role: 'Keeps products, brands and value streams running despite node failures.',
       lens: 'Which SKUs are fragile, and which node breaks them first?',
       home: 'valuestream',
       suggests: ['Which products have TTR > TTS?', 'Biggest value at risk right now', 'What if Taicang MicroControls fails for 45 days?', 'Daily resilience brief']
     },
     {
-      id: 'cat', short: 'CAT', name: 'Category Leader', color: '#d97706',
+      id: 'cat', short: 'CAT', name: 'Category Leader', color: '#d97706', tag: 'Suppliers & materials',
       role: 'Owns supplier and material risk — sourcing, qualification and commercial mitigation.',
       lens: 'Which materials need alternates, buffers or new contract terms?',
       home: 'category',
       suggests: ['Mitigation plan for single-source materials', 'Top 5 risk nodes by AVAR', 'Why is CapForm Industries critical?', 'Which materials are single-sourced?']
     },
     {
-      id: 'site', short: 'SITE', name: 'SC Site Leader', color: '#3b82f6',
+      id: 'site', short: 'SITE', name: 'SC Site Leader', color: '#3b82f6', tag: 'Plant & DC continuity',
       role: 'Protects plant & DC continuity: inbound materials, capacity and outbound supply.',
       lens: 'Can my site keep running, and what is the playbook if it cannot?',
       home: 'site',
@@ -207,15 +207,14 @@ SCR.registerPage = function (key, page) { SCR.pages[key] = page; };
 
   function buildPersonaMenu() {
     const menu = document.getElementById('personaMenu');
-    menu.innerHTML = '<div class="pm-head">VIEW AS — persona re-lenses the sidebar, landing and copilot</div>';
+    menu.innerHTML = '';
     PERSONAS.forEach(p => {
       const active = p.id === currentPersona;
-      const opt = SCR.ui.el(`<button class="persona-opt" style="${active ? `background:color-mix(in srgb, ${p.color} 9%, transparent)` : ''}">
+      const opt = SCR.ui.el(`<button class="persona-opt" title="${SCR.ui.esc(p.role)}" style="${active ? `background:color-mix(in srgb, ${p.color} 9%, transparent)` : ''}">
         <span class="po-avatar" style="background:color-mix(in srgb, ${p.color} 16%, transparent);color:${p.color}">${initials(p.name)}</span>
         <span class="po-meta">
           <span class="po-name">${SCR.ui.esc(p.name)}</span>
-          <span class="po-role">${SCR.ui.esc(p.role)}</span>
-          <span class="po-lens">“${SCR.ui.esc(p.lens)}”</span>
+          <span class="po-tag">${SCR.ui.esc(p.tag)}</span>
         </span>
         ${active ? `<svg class="po-check" viewBox="0 0 24 24" fill="none" stroke="${p.color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>` : ''}
       </button>`);

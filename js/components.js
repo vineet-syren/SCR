@@ -99,10 +99,17 @@ window.SCR = window.SCR || {};
         <div class="k-value">${it.value}${it.unit ? ` <small>${esc(it.unit)}</small>` : ''}</div>
         ${it.progress ? `<span class="progress"><i style="width:${Math.min(100, it.progress.pct)}%;background:${it.progress.color}"></i></span>` : ''}
         ${it.sub
-          ? `<div class="k-sub ${it.subClass || ''} ${pill ? 'k-pill' : ''}">${esc(it.sub)}${(it.onClick && !pill) ? ARROW : ''}</div>`
+          ? `<div class="k-sub ${it.subClass || ''} ${pill ? 'k-pill' : ''} ${it.subOnClick ? 'k-sub-link' : ''}">${esc(it.sub)}${(it.onClick && !pill) ? ARROW : ''}</div>`
           : (it.onClick ? `<div class="k-sub">Open ${ARROW}</div>` : '<div class="k-sub"></div>')}
       </div>`);
       if (it.onClick) node.addEventListener('click', it.onClick);
+      // A sub-pill can be its own drill target ("2 critical" → the critical queue),
+      // so it must not also fire the tile's broader navigation.
+      if (it.subOnClick) {
+        const sub = node.querySelector('.k-sub');
+        sub.title = it.subTitle || '';
+        sub.addEventListener('click', e => { e.stopPropagation(); it.subOnClick(); });
+      }
       wrap.appendChild(node);
     });
     if (opts && opts.bulb) {
@@ -222,12 +229,84 @@ window.SCR = window.SCR || {};
       <div class="card-body ${cfg.flush ? 'flush' : ''}"></div>
     </div>`);
     (cfg.actions || []).forEach(a => node.querySelector('.card-actions').appendChild(a));
+    // Every card carries an agent-insight affordance so a chart never has to be
+    // read cold. Opt out only where the card is itself an explanation.
+    if (!cfg.noInsight) node.querySelector('.card-actions').appendChild(insightBtn(cfg.title, cfg.insight));
     if (cfg.chartClass) {
       const c = el(`<div class="chart ${cfg.chartClass}"></div>`);
       node.querySelector('.card-body').appendChild(c);
       node._chartEl = c;
     }
     return node;
+  }
+
+  /* ---------------- AI agent insights (platform-wide) ----------------
+     Any card can declare `insight`, as an object or a function evaluated at
+     click time so the reading reflects whatever filters are live:
+       { agent, reads: [{label, value, tone}], points: [..], actions: [{label, onClick}] }
+     Cards that declare nothing still get a button, answered from the
+     enterprise roll-up — the affordance is never a dead end. */
+  const SPARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 4.9L19 9.8l-4.1 2.4L13.6 17 12 12.8 10.4 17l-1.3-4.8L5 9.8l5.1-1.9Z"/><path d="M19 15.5 19.7 17l1.6.6-1.6.6-.7 1.5-.7-1.5-1.6-.6 1.6-.6Z"/></svg>';
+
+  function fallbackInsight(title) {
+    const D = SCR.data, F = SCR.fmt, k = D.kpis;
+    return {
+      agent: 'Impact & VAR Agent',
+      reads: [
+        { label: 'Value at risk', value: F.usdM(k.totalVAR) },
+        { label: 'Adjusted (AVAR)', value: F.usdM(k.totalAVAR), tone: 'bad' },
+        { label: 'Resilience index', value: k.enterpriseRI + '%', tone: k.enterpriseRI >= 70 ? 'good' : 'bad' }
+      ],
+      points: [
+        `“${title}” is scoped by the filters above it, so every figure here is a slice of the ${F.usdM(k.totalVAR)} enterprise value at risk.`,
+        `${k.gapMaterials} components still recover slower than they can survive (TTR > TTS) — those are what convert exposure into lost sales.`,
+        `${F.usdM(k.mitigatedYtd)} of AVAR has been retired year to date, which is the gap between the gross and adjusted numbers.`
+      ],
+      actions: [
+        { label: 'Open Executive Summary', onClick: () => SCR.navigate('executive') },
+        { label: 'Ask the Copilot', onClick: () => SCR.copilot && SCR.copilot.open() }
+      ]
+    };
+  }
+
+  function openInsight(title, insight) {
+    let spec;
+    try { spec = (typeof insight === 'function' ? insight() : insight) || fallbackInsight(title); }
+    catch (_) { spec = fallbackInsight(title); }
+    openDrawer('AI agent insight', title, body => {
+      body.appendChild(el(`<div class="ins-agent">
+        <span class="ins-agent-chip">${SPARK}</span>
+        <span><strong>${esc(spec.agent || 'Resilience Copilot')}</strong>
+        <span class="muted" style="display:block;font-size:11.5px">read this card and summarised what matters</span></span>
+      </div>`));
+      if (spec.reads && spec.reads.length) {
+        const facts = el('<div class="facts" style="margin-bottom:14px"></div>');
+        spec.reads.forEach(r => facts.appendChild(el(
+          `<div class="fact"><div class="f-label">${esc(r.label)}</div>
+           <div class="f-value" ${r.tone === 'bad' ? 'style="color:var(--status-critical)"' : r.tone === 'good' ? 'style="color:var(--status-good)"' : ''}>${r.value}</div></div>`)));
+        body.appendChild(facts);
+      }
+      body.appendChild(el('<div class="sec-title">What the agent sees</div>'));
+      const ul = el('<ul class="ins-points"></ul>');
+      (spec.points || []).forEach(p => ul.appendChild(el(`<li>${p}</li>`)));
+      body.appendChild(ul);
+      if (spec.actions && spec.actions.length) {
+        body.appendChild(el('<div class="sec-title">Where to go next</div>'));
+        const row = el('<div class="ins-actions"></div>');
+        spec.actions.forEach(a => {
+          const b = el(`<button class="btn">${esc(a.label)}</button>`);
+          b.addEventListener('click', () => { closeDrawer(); a.onClick && a.onClick(); });
+          row.appendChild(b);
+        });
+        body.appendChild(row);
+      }
+    });
+  }
+
+  function insightBtn(title, insight) {
+    const b = el(`<button class="btn insight-btn" title="AI agent insights for “${esc(title)}”">${SPARK}<span>AI insights</span></button>`);
+    b.addEventListener('click', e => { e.stopPropagation(); openInsight(title, insight); });
+    return b;
   }
 
   /* ---------------- Toast ---------------- */
@@ -630,7 +709,7 @@ window.SCR = window.SCR || {};
   SCR.ui = {
     el, esc, badge, riBadge, statusBadge, scoreSpan, riSpan, meter, riMeter,
     gapRows, gapLegend, dimBars, kpiStrip, cellBar, heatPill, filterBlock, table, card,
-    riMatrixGuide, metricGuide, scrollToCard,
+    riMatrixGuide, metricGuide, scrollToCard, openInsight, insightBtn,
     toast, modal, closeModal, createAction,
     openDrawer, closeDrawer,
     openSupplier, openMaterial, openProduct, openSite, openAlert

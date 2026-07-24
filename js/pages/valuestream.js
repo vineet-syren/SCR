@@ -135,7 +135,26 @@ window.SCR = window.SCR || {};
     const comboCard = U.card({
       title: 'NTS (MM USD), WAVAR (MM USD) and Resilience % by Product',
       sub: 'columns share the $ axis · Resilience % reads as dots on its own aligned panel · click a column to drill',
-      cols: 12, chartClass: 'chart-xl'
+      cols: 12, chartClass: 'chart-xl',
+      insight: () => {
+        const r = prods.slice().sort((a, b) => b.avar - a.avar);
+        const worstRi = prods.slice().sort((a, b) => a.ri - b.ri)[0];
+        const gap = prods.filter(p => p.ri < 60);
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'NTS in scope', value: F.usdM(prods.reduce((a, p) => a + p.nts, 0)) },
+            { label: 'Weighted AVAR', value: F.usdM(+prods.reduce((a, p) => a + p.avar, 0).toFixed(1)), tone: 'bad' },
+            { label: 'Lowest RI', value: worstRi ? worstRi.ri + '%' : '—', tone: 'bad' }
+          ],
+          points: [
+            'The two column series share one dollar axis and the resilience line sits on its own aligned panel — deliberately not a second y-axis, so column heights stay honestly comparable.',
+            r.length ? `<strong>${U.esc(r[0].name)}</strong> carries the most weighted AVAR at ${r[0].avar.toFixed(1)}M against ${F.usdM(r[0].nts)} of net sales.` : 'No products in scope.',
+            worstRi ? `Resilience runs lowest on <strong>${U.esc(worstRi.name)}</strong> at ${worstRi.ri}%${gap.length > 1 ? `, one of ${gap.length} products under 60%` : ''} — a tall column with a low dot is the combination that matters.` : ''
+          ].filter(Boolean),
+          actions: r.length ? [{ label: 'Drill ' + r[0].name, onClick: () => { state.product = r[0].id; SCR.navigate('valuestream'); } }] : []
+        };
+      }
     });
     comboCard.id = 'vsCombo';
     grid.appendChild(comboCard);
@@ -173,7 +192,25 @@ window.SCR = window.SCR || {};
     /* ===== Product table ===== */
     const tblCard = U.card({
       title: 'Products in scope', sub: 'click a row to open the Node Overview drill (product → nodes → exposure)',
-      cols: 12, flush: true
+      cols: 12, flush: true,
+      insight: () => {
+        const risky = prods.filter(p => p.gapMax > 0);
+        const r = prods.slice().sort((a, b) => b.gapMax - a.gapMax);
+        return {
+          agent: 'TTS Watch Agent',
+          reads: [
+            { label: 'Products', value: prods.length },
+            { label: 'TTR beyond TTS', value: risky.length, tone: risky.length ? 'bad' : 'good' },
+            { label: 'Worst gap', value: r.length ? r[0].gapMax + 'd' : '—', tone: 'bad' }
+          ],
+          points: [
+            `${risky.length} of ${prods.length} products in scope take longer to recover than they can survive — those are the ones that turn a disruption into lost sales.`,
+            r.length && r[0].gapMax > 0 ? `<strong>${U.esc(r[0].name)}</strong> has the widest gap: ${r[0].ttrMax} days to recover against ${r[0].ttsMin} days of cover, leaving ${r[0].gapMax} uncovered days.` : 'No product currently recovers slower than it survives.',
+            'Every row opens the Node Overview drill, which attributes that product\u2019s exposure to the specific suppliers, plants and DCs behind it.'
+          ],
+          actions: r.length ? [{ label: 'Drill the worst gap', onClick: () => { state.product = r[0].id; SCR.navigate('valuestream'); } }] : []
+        };
+      }
     });
     tblCard.id = 'vsProducts';
     grid.appendChild(tblCard);
@@ -272,7 +309,30 @@ window.SCR = window.SCR || {};
     const nodeCard = U.card({
       title: 'Node AVAR vs Sales Impacted',
       sub: 'every supplier, plant and DC this product depends on · click a row for the node 360°',
-      cols: 9, flush: true, actions: [seg]
+      cols: 9, flush: true, actions: [seg],
+      insight: () => {
+        const rows = D.nodeExposureFor(prod.id).slice().sort((a, b) => b[measure] - a[measure]);
+        const tot = rows.reduce((a, r) => a + r[measure], 0) || 1;
+        const top = rows[0];
+        const byType = {};
+        rows.forEach(r => { byType[r.type] = (byType[r.type] || 0) + r[measure]; });
+        const worstType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
+        const lbl = measure === 'avar' ? 'AVAR' : 'sales impacted';
+        return {
+          agent: 'Network Sensing Agent',
+          reads: [
+            { label: 'Nodes behind this SKU', value: rows.length },
+            { label: 'Top node ' + lbl, value: top ? F.usdM(+top[measure].toFixed(1)) : '—', tone: 'bad' },
+            { label: 'Its share', value: top ? ((top[measure] / tot) * 100).toFixed(0) + '%' : '—' }
+          ],
+          points: [
+            `<strong>${U.esc(prod.name)}</strong> depends on ${rows.length} nodes. Exposure is attributed to each, so the column sums to the product's total rather than double-counting.`,
+            top ? `<strong>${U.esc(top.name)}</strong> (${U.esc(top.type)}) is the single largest at ${F.usdM(+top[measure].toFixed(1))} — ${((top[measure] / tot) * 100).toFixed(0)}% of this product's ${lbl}.` : 'No nodes attributed.',
+            worstType ? `By node class, ${U.esc(worstType[0].toLowerCase())}s carry the most at ${F.usdM(+worstType[1].toFixed(1))}, which points at where a fix would have to land.` : ''
+          ].filter(Boolean),
+          actions: top ? [{ label: '360° on ' + top.name, onClick: () => top.type === 'Supplier' ? U.openSupplier(top.id) : U.openSite(top.id) }] : []
+        };
+      }
     });
     nodeCard.id = 'noNodeCard';
     grid.appendChild(nodeCard);
@@ -306,7 +366,29 @@ window.SCR = window.SCR || {};
     /* ===== Node Data (below, from the original) ===== */
     const dataCard = U.card({
       title: 'Node Data', sub: 'attributed exposure per node with recovery and resilience',
-      cols: 7, flush: true
+      cols: 7, flush: true,
+      insight: () => {
+        const rows = D.nodeExposureFor(prod.id).slice().sort((a, b) => b.avar - a.avar);
+        const weak = rows.filter(r => r.ri < 60);
+        const slow = rows.map(r => {
+          const ref = r.type === 'Supplier' ? D.supplierById(r.id) : (D.plantById(r.id) || D.dcById(r.id));
+          return { r, ttr: ref ? ref.ttr : 0 };
+        }).sort((a, b) => b.ttr - a.ttr)[0];
+        return {
+          agent: 'Impact & VAR Agent',
+          reads: [
+            { label: 'VAR on this SKU', value: F.usdM(+rows.reduce((a, r) => a + r.var, 0).toFixed(1)) },
+            { label: 'AVAR', value: F.usdM(+rows.reduce((a, r) => a + r.avar, 0).toFixed(1)), tone: 'bad' },
+            { label: 'Nodes under RI 60', value: weak.length, tone: weak.length ? 'bad' : 'good' }
+          ],
+          points: [
+            'VAR is the gross sales at risk; AVAR applies the probability of the disruption actually happening. The gap between the two columns is how much of this is expected rather than worst-case.',
+            slow && slow.ttr ? `Slowest node to recover is <strong>${U.esc(slow.r.name)}</strong> at ${F.days(slow.ttr)} — recovery time is what converts a stoppage into lost sales.` : '',
+            weak.length ? `${weak.length} node${weak.length === 1 ? '' : 's'} sit${weak.length === 1 ? 's' : ''} below an RI of 60: ${weak.slice(0, 3).map(r => U.esc(r.name)).join(', ')}.` : 'Every node here holds an RI of 60 or better.'
+          ].filter(Boolean),
+          actions: [{ label: 'Open Network Explorer', onClick: () => SCR.navigate('network') }]
+        };
+      }
     });
     grid.appendChild(dataCard);
     const rows2 = D.nodeExposureFor(prod.id).sort((a, b) => b.avar - a.avar);
@@ -328,7 +410,28 @@ window.SCR = window.SCR || {};
     const gapCard = U.card({
       title: 'TTR vs TTS — this product’s BOM',
       sub: 'recovery beyond survival = uncovered days · click nothing, hover for detail',
-      cols: 5
+      cols: 5,
+      insight: () => {
+        const risky = mats.filter(m => m.ttr > m.tts);
+        const w = mats[0];
+        return {
+          agent: 'TTS Watch Agent',
+          reads: [
+            { label: 'Components', value: mats.length },
+            { label: 'Uncovered', value: risky.length, tone: risky.length ? 'bad' : 'good' },
+            { label: 'Worst gap', value: w ? Math.max(0, w.ttr - w.tts) + 'd' : '—', tone: 'bad' }
+          ],
+          points: [
+            'Each row pairs how long the component can survive on cover (TTS) against how long it needs to recover (TTR). Where the recovery bar runs past the survival bar, those days are uncovered.',
+            w && w.ttr > w.tts ? `<strong>${U.esc(w.name)}</strong> is the binding constraint: ${F.days(w.tts)} of cover against ${F.days(w.ttr)} to recover, leaving ${w.ttr - w.tts} uncovered days.` : 'No component recovers slower than it can survive.',
+            risky.length ? `${risky.length} of ${mats.length} components in this BOM are uncovered — buffer or a qualified alternate closes the gap.` : 'The whole BOM is covered at current inventory.'
+          ],
+          actions: [
+            { label: 'Open Category & Suppliers', onClick: () => SCR.navigate('category') },
+            w ? { label: '360° on ' + w.name, onClick: () => U.openMaterial(w.id) } : null
+          ].filter(Boolean)
+        };
+      }
     });
     gapCard.id = 'noGaps';
     grid.appendChild(gapCard);
