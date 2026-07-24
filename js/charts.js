@@ -18,12 +18,35 @@ window.SCR = window.SCR || {};
     if (!el) return null;
     const chart = echarts.init(el, null, { renderer: 'canvas' });
     chart.setOption(factory());
-    registry.push({ el, chart, factory });
+    const entry = { el, chart, factory };
+    // A canvas keeps its last pixel size until told otherwise, so a container
+    // change that isn't a window resize (sidebar collapse, layout reflow, zoom)
+    // would leave it overflowing its card. Observing the box closes that class
+    // instead of enumerating it. This cannot feed back: `el` is sized by layout
+    // (width:100% + a fixed height class), so resizing the canvas inside it
+    // never changes the box we observe. The size guard is belt-and-braces, and
+    // also skips the initial delivery that fires on observe().
+    if (typeof ResizeObserver !== 'undefined') {
+      let lastW = Math.round(el.clientWidth), lastH = Math.round(el.clientHeight);
+      entry.ro = new ResizeObserver(entries => {
+        const box = entries && entries[0] && entries[0].contentRect;
+        if (!box) return;
+        const w = Math.round(box.width), h = Math.round(box.height);
+        if (w === lastW && h === lastH) return;
+        lastW = w; lastH = h;
+        try { chart.resize(); } catch (_) {}
+      });
+      entry.ro.observe(el);
+    }
+    registry.push(entry);
     return chart;
   }
 
   function disposeAll() {
-    registry.forEach(e => { try { e.chart.dispose(); } catch (_) {} });
+    registry.forEach(e => {
+      try { if (e.ro) e.ro.disconnect(); } catch (_) {}
+      try { e.chart.dispose(); } catch (_) {}
+    });
     registry.length = 0;
   }
 
@@ -67,8 +90,10 @@ window.SCR = window.SCR || {};
      opts: { format, downIsGood } — in a risk bridge, decreases are good. */
   function waterfall(el, steps, opts) {
     opts = opts || {};
+    steps = steps || [];
     return mount(el, () => {
       const t = SCR.theme.tokens();
+      if (!steps.length) return { series: [] };
       const fmtV = opts.format || SCR.fmt.usdM;
       const labels = steps.map(s => s.label);
       const base = [], rise = [], fall = [], totals = [];
@@ -136,6 +161,7 @@ window.SCR = window.SCR || {};
       const colTotals = data.cols.map(c =>
         data.cats.reduce((a, k) => a + (data.values[c][k] || 0), 0));
       const grand = colTotals.reduce((a, b) => a + b, 0);
+      if (grand <= 0) return { series: [] };
 
       // segment rows: [x0, x1, y0(%), y1(%), col, cat, value, catIdx, colTotal]
       const rows = [];
@@ -232,6 +258,7 @@ window.SCR = window.SCR || {};
         });
       });
       const allDates = rows.flatMap(r => [r.value[1], r.value[2]]);
+      if (!allDates.length) return { series: [] };
       const min = Math.min.apply(null, allDates) - 4 * DAY;
       const max = Math.max.apply(null, allDates) + 4 * DAY;
       const today = +new Date(SCR.data.asOf);
@@ -292,8 +319,10 @@ window.SCR = window.SCR || {};
      }
      One x axis, two stacked grids — the % line never shares the $ axis. */
   function comboPanel(el, cfg) {
+    cfg = cfg || {};
     return mount(el, () => {
       const t = SCR.theme.tokens();
+      if (!cfg.labels || !cfg.labels.length) return { series: [] };
       const barFmt = cfg.barFmt || SCR.fmt.usdM;
       const lineFmt = (cfg.line && cfg.line.fmt) || SCR.fmt.ri;
       const lineColor = cfg.line.color ? cfg.line.color(t) : t.series[6];

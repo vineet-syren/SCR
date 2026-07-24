@@ -82,7 +82,7 @@ window.SCR = window.SCR || {};
             ${U.riBadge(pt.ri)}
           </div>
           <div class="muted" style="font-size:12px;margin-bottom:10px">${U.esc(pt.focus)} · ${U.esc(pt.region)}</div>
-          <div class="flex gap12" style="font-size:12px">
+          <div class="flex wrap gap12" style="font-size:12px">
             <span><b style="font-size:15px">${F.usdM(pt.nts)}</b><br/><span class="muted">NTS served</span></span>
             <span><b style="font-size:15px">${pt.products.length}</b><br/><span class="muted">products</span></span>
             <span><b style="font-size:15px;color:${crit ? 'var(--status-critical)' : 'var(--status-good)'}">${crit}</b><br/><span class="muted">can stop it</span></span>
@@ -110,8 +110,10 @@ window.SCR = window.SCR || {};
      ===================================================== */
   function renderSite(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
+    // A stale/unknown site id (e.g. a DC routed here) falls back to the picker rather than crashing.
     const site = D.plantById(state.site);
-    const factors = SITE_FACTORS[state.site];
+    if (!site) { state.site = null; return renderPicker(host); }
+    const factors = SITE_FACTORS[state.site] || SITE_FACTORS.PT1;
 
     SCR.setCrumbs([
       { label: 'SC Site Leader', key: 'site', opts: { reset: true } },

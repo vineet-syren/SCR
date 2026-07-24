@@ -44,14 +44,14 @@ SCR.registerPage = SCR.registerPage || function (key, page) { SCR.pages[key] = p
         serious: cssVar('--status-serious'),
         critical: cssVar('--status-critical')
       },
-      // sequential single-hue teal ramp (light→dark reads low→high)
+      // sequential single-hue indigo ramp (light→dark reads low→high)
       seq: isDark
-        ? ['#134e4a', '#115e59', '#0f766e', '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4']
-        : ['#ccfbf1', '#99f6e4', '#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59'],
+        ? ['#312e81', '#3730a3', '#4338ca', '#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe']
+        : ['#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3'],
       // ordinal ramp for funnels / tiers (mid steps for contrast on both surfaces)
       ordinal: isDark
-        ? ['#0f766e', '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4']
-        : ['#5eead4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e']
+        ? ['#4338ca', '#4f46e5', '#6366f1', '#818cf8', '#a5b4fc']
+        : ['#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca']
     };
   }
 

@@ -198,7 +198,12 @@ window.SCR = window.SCR || {};
   function renderNode(host) {
     const D = SCR.data, F = SCR.fmt, U = SCR.ui;
     const prods = filtered().slice().sort((a, b) => a.name.localeCompare(b.name));
-    const prod = D.productById(state.product) || prods[0];
+    // Resolve the drilled product defensively: a stale/unknown id must not crash the view.
+    const prod = D.productById(state.product) || prods[0] || D.products[0];
+    if (!prod) {
+      host.appendChild(U.el('<div class="empty">No product available for this scope.</div>'));
+      return;
+    }
     state.product = prod.id;
 
     const scopeStr = `Sector: ${prod.sectorName} ; Value Stream: ${prod.stream} ; Product: ${prod.name}`;

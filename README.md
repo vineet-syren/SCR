@@ -47,7 +47,7 @@ Opening `index.html` directly from the filesystem also works (no ES modules).
 | **Network Explorer** | Digital twin | Layered dependency graph (supplier → material → plant → DC → market, red = single-source), **Sankey** (NTS value flow), single-points-of-failure list |
 | **Scenario Studio** | What-if simulation with live recompute | Compare tiles, **Waterfall** (exposed → inventory cover → mitigation → residual), ranked mitigation options |
 | **Alerts & Actions** | Exception management | **Funnel** (signal → executed action), **Gantt** (resilience programs), action tracker with RRE before/after |
-| **AI Agents** | The agentic layer | 6 live agents, approval queue, activity feed, daily digest |
+| **Recommendations** | The agentic layer | Approval queue, agent activity feed, daily digest |
 | **Data Quality** | Governance | Completeness bars, coverage by sector, missing-data worklist, refresh log |
 
 Cross-cutting:
@@ -93,11 +93,11 @@ vendor/echarts.min.js Apache ECharts 5.5 (vendored — fully offline)
 
 ## Navigation
 
-Collapsible left sidebar (persona-filtered, subtle width animation) under a dark app bar:
+Collapsible left sidebar (persona-filtered, subtle width animation) under a light app bar:
 **My cockpit** (Executive Summary · Value Streams · Category & Suppliers · Site
 Resilience) · **Intelligence** (Network Explorer · Scenario Studio) · **Act** (Alerts &
-Actions · AI Agents) · **Govern** (Data Quality). `Filter ›` flyouts scope each persona
-page. Signature elements modernized from the original screenshots: icon-chip KPI strips
+Actions · Recommendations) · **Govern** (Data Quality). An always-visible filter bar scopes
+each persona page. Signature elements modernized from the original screenshots: icon-chip KPI strips
 with the insight bulb, teal-headed tables, the Node Overview drill (product list → Node
 AVAR vs Sales Impacted with AVAR/SALES toggle and in-cell bars), the Category node data
 summary (multi-measure in-row bars) and the Node Risk Summary heat matrix.
@@ -105,19 +105,21 @@ summary (multi-measure in-row bars) and the Node Risk Summary heat matrix.
 **Every KPI tile is a drill.** Each icon-chip tile in a strip either scrolls-and-highlights
 the section that explains it (e.g. Nodes → the Top-10 ranking, Spend → the spend tree map)
 or routes to another persona cockpit (Supplier/EM → Category, Plants & DCs → Site). The
-RI tiles open the RI Matrix guide. **AI Agents are functional**: each of the six live
-agent cards opens a 360° drawer with the agent's live stats, what it does, its recent
-activity filtered from the feed, and jump-to actions into the relevant dashboard; the
-approval queue approves/dismisses recommendations (handing off to Execution & Workflow),
-and the daily-digest generator composes a live brief.
+RI tiles open the RI Matrix guide. **The agentic layer is functional**: any row in the
+activity feed opens a 360° drawer with that agent's live stats, what it does, its recent
+activity and jump-to actions into the relevant dashboard; the approval queue
+approves/dismisses recommendations (handing off to Execution & Workflow), and the
+daily-digest generator composes a live brief.
 
 ## Design language
 
-Same family as the SRS demo (Inter on white cards over a soft gray canvas, light
-sidebar, generous type) but with its own identity: **teal `#0d9488`** as the single
-decisioning accent and a **validated categorical palette** in fixed order
-(teal → violet → amber → blue → rose → emerald → indigo → orange; CVD-checked for
-both light and dark surfaces). Status colors (emerald/amber/orange/red) are reserved
-for severity and never reused as series. Sequential magnitude (heat map, ranked
-bars) uses a single-hue teal ramp. The one place a % line meets $ columns, the line
-gets **its own aligned panel and axis** — never a second y-axis on the same plot.
+A clean, modern SaaS-analytics UI in the Terova/Tradewind idiom: Inter on white cards over a
+soft neutral canvas, a light dark-mode-capable app bar, and **indigo `#4f46e5`** as the single
+decisioning accent. KPIs render as **spacious individual tiles** — a border-left accent, a soft
+tinted icon chip, a large value, and a rounded delta pill or arrowed drill hint — not a joined
+strip. Filters sit in a clean always-visible bar. Cards use a 14px radius, hairline borders and
+soft layered shadows that lift on hover. A **validated categorical chart palette** in fixed order
+(teal → violet → amber → blue → rose → emerald → indigo → orange; CVD-checked for both light and
+dark surfaces) drives every chart; status colors (emerald/amber/orange/red) are reserved for
+severity. The one place a % line meets $ columns, the line gets its own aligned panel and axis —
+never a second y-axis on the same plot.

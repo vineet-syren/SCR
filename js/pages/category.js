@@ -73,8 +73,8 @@ window.SCR = window.SCR || {};
           axisLabel: { formatter: cfg.yFmt || (v => F.num(v)) }
         }),
         dataZoom: [
-          { type: 'slider', xAxisIndex: 0, height: 13, bottom: 4, borderColor: t.border, fillerColor: 'rgba(13,148,136,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } },
-          { type: 'slider', yAxisIndex: 0, width: 13, left: 2, borderColor: t.border, fillerColor: 'rgba(13,148,136,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } }
+          { type: 'slider', xAxisIndex: 0, height: 13, bottom: 4, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } },
+          { type: 'slider', yAxisIndex: 0, width: 13, left: 2, borderColor: t.border, fillerColor: 'rgba(79,70,229,.14)', handleStyle: { color: t.accent }, textStyle: { color: t.ink3, fontSize: 10 } }
         ],
         series: [{
           type: 'scatter',

@@ -111,23 +111,22 @@ window.SCR = window.SCR || {};
     const g = buildGraph();
     const tierCount = tier => g.nodes.filter(n => n.tier === tier).length;
     const singleLinks = g.links.filter(l => l[2]).length;
-    const fb = U.el(`<div class="filter-row"><div class="filter-flyout open" style="margin-top:0;align-items:center">
-      <div class="ff-field" style="min-width:280px">
-        <label>Trace a product's dependency chain</label>
+    const fb = U.el(`<div class="filterbar">
+      <label class="fb-field"><span>Trace a product</span>
         <select id="fProd">
           <option value="all">Entire network — all products</option>
           ${D.products.map(p => `<option value="${p.id}" ${state.product === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
         </select>
-      </div>
-      <div class="chip-row" style="margin-left:6px">
+      </label>
+      <span class="fb-note" style="margin-left:auto"><span class="chip-row">
         <span class="badge neutral plain">${tierCount('Supplier')} suppliers</span>
         <span class="badge neutral plain">${tierCount('Material')} materials</span>
         <span class="badge neutral plain">${tierCount('Plant')} plants</span>
         <span class="badge neutral plain">${tierCount('DC')} DCs</span>
         <span class="badge neutral plain">${tierCount('Market')} markets</span>
         <span class="badge ${singleLinks ? 'critical' : 'low'}">${singleLinks} single-source link${singleLinks === 1 ? '' : 's'}</span>
-      </div>
-    </div></div>`);
+      </span></span>
+    </div>`);
     host.appendChild(fb);
     fb.querySelector('#fProd').addEventListener('change', e => {
       state.product = e.target.value;

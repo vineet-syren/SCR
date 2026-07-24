@@ -85,33 +85,35 @@ window.SCR = window.SCR || {};
 
   /** items: [{icon, color(idx into CHIP_COLORS or hex), label, value, sub, subClass, progress:{pct,color}, onClick}]
       opts: {bulb: {onClick}} */
+  const ARROW = '<svg class="k-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>';
   function kpiStrip(items, opts) {
-    const row = el('<div class="kpi-strip-row"></div>');
-    const strip = el('<div class="kpi-strip"></div>');
+    const wrap = el('<div class="kpi-cards"></div>');
     items.forEach((it, i) => {
       const color = typeof it.color === 'string' ? it.color : CHIP_COLORS[(it.color != null ? it.color : i) % CHIP_COLORS.length];
-      const node = el(`<div class="kpi-item ${it.onClick ? 'clickable' : ''}">
-        <span class="kpi-chip" style="background:color-mix(in srgb, ${color} 13%, transparent);color:${color}">${CHIP_ICONS[it.icon] || CHIP_ICONS.box}</span>
-        <span class="kpi-meta">
+      const pill = it.subClass === 'good' || it.subClass === 'bad';
+      const node = el(`<div class="kpi-card ${it.onClick ? 'clickable' : ''}" style="--kpi-accent:${color}">
+        <div class="kc-top">
           <span class="k-label">${esc(it.label)}</span>
-          <span class="k-value">${it.value}${it.unit ? ` <small>${esc(it.unit)}</small>` : ''}</span>
-          ${it.progress ? `<span class="progress"><i style="width:${Math.min(100, it.progress.pct)}%;background:${it.progress.color}"></i></span>` : ''}
-          ${it.sub ? `<span class="k-sub ${it.subClass || ''}">${esc(it.sub)}</span>` : ''}
-        </span>
+          <span class="kpi-chip" style="background:color-mix(in srgb, ${color} 13%, transparent);color:${color}">${CHIP_ICONS[it.icon] || CHIP_ICONS.box}</span>
+        </div>
+        <div class="k-value">${it.value}${it.unit ? ` <small>${esc(it.unit)}</small>` : ''}</div>
+        ${it.progress ? `<span class="progress"><i style="width:${Math.min(100, it.progress.pct)}%;background:${it.progress.color}"></i></span>` : ''}
+        ${it.sub
+          ? `<div class="k-sub ${it.subClass || ''} ${pill ? 'k-pill' : ''}">${esc(it.sub)}${(it.onClick && !pill) ? ARROW : ''}</div>`
+          : (it.onClick ? `<div class="k-sub">Open ${ARROW}</div>` : '<div class="k-sub"></div>')}
       </div>`);
       if (it.onClick) node.addEventListener('click', it.onClick);
-      strip.appendChild(node);
+      wrap.appendChild(node);
     });
-    row.appendChild(strip);
     if (opts && opts.bulb) {
-      const bulb = el(`<button class="bulb-card" title="Generated insights for this view">
+      const bulb = el(`<button class="kpi-card bulb-card" title="Generated insights for this view">
         <span class="bulb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2Z"/></svg></span>
-        <span>Insights</span>
+        <span class="bulb-label">Insights</span>
       </button>`);
       bulb.addEventListener('click', opts.bulb.onClick);
-      row.appendChild(bulb);
+      wrap.appendChild(bulb);
     }
-    return row;
+    return wrap;
   }
 
   /* ---------------- In-cell measure bar (multi-measure node tables) ---------------- */
@@ -127,29 +129,20 @@ window.SCR = window.SCR || {};
     return `<span style="display:block;text-align:center;background:${c};color:#fff;font-weight:700;font-size:11.5px;border-radius:5px;padding:3px 0;min-width:52px;font-variant-numeric:tabular-nums">${v.toFixed(2)}</span>`;
   }
 
-  /* ---------------- Filter flyout (original "Filter ›" pattern) ---------------- */
+  /* ---------------- Filter bar (clean, always-visible inline filters) ---------------- */
   /** fields: [{id, label, options:[{v,label,sel}], onChange}] */
   function filterBlock(fields, note) {
-    const wrap = el(`<div class="filter-row">
-      <button class="filter-launch">Filter
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
-      </button>
-      <div class="filter-flyout"></div>
+    const wrap = el(`<div class="filterbar">
+      <span class="fb-lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18"/><path d="M6 12h12"/><path d="M10 19h4"/></svg>Filters</span>
     </div>`);
-    const btn = wrap.querySelector('.filter-launch');
-    const fly = wrap.querySelector('.filter-flyout');
     fields.forEach(f => {
-      const field = el(`<div class="ff-field"><label>${esc(f.label)}</label>
+      const field = el(`<label class="fb-field"><span>${esc(f.label)}</span>
         <select id="${f.id}">${f.options.map(o => `<option value="${esc(o.v)}" ${o.sel ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
-      </div>`);
+      </label>`);
       field.querySelector('select').addEventListener('change', e => f.onChange(e.target.value));
-      fly.appendChild(field);
+      wrap.appendChild(field);
     });
-    if (note) fly.appendChild(el(`<div class="ff-actions"><span class="muted" style="font-size:12px;align-self:center">${esc(note)}</span></div>`));
-    btn.addEventListener('click', () => {
-      btn.classList.toggle('open');
-      fly.classList.toggle('open');
-    });
+    if (note) wrap.appendChild(el(`<span class="fb-note">${esc(note)}</span>`));
     return wrap;
   }
 

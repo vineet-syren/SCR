@@ -157,6 +157,10 @@ window.SCR = window.SCR || {};
     ], 'Thresholds: RI ≥ 60 · gap ≤ 0 days · configurable per BU'));
 
     const prods = scopeProducts();
+    if (!prods.length) {
+      host.appendChild(U.el('<div class="empty">No products match this scope.</div>'));
+      return;
+    }
     const nts = prods.reduce((a, p) => a + p.nts, 0);
     const avar = +prods.reduce((a, p) => a + p.avar, 0).toFixed(1);
     const mkts = new Set(prods.flatMap(p => p.markets));
